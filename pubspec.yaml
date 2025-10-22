@@ -1,0 +1,35 @@
+name: taller_autos
+description: App para gestión de taller de autos
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # Arquitectura
+  flutter_modular: ^6.3.4
+  flutter_bloc: ^9.1.1
+  
+  # Base de datos
+  sqflite: ^2.3.0
+  sqflite_common_ffi: ^2.3.6
+  path: ^1.8.3
+  
+  # UI
+  cupertino_icons: ^1.0.6
+  intl: ^0.20.2
+  
+  # Utilidades
+  equatable: ^2.0.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
