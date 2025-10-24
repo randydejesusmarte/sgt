@@ -605,7 +605,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
               backgroundColor: Colors.green,
             ),
           );
-        };
+        }
       },
     );
   }
@@ -915,7 +915,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
     String? Function(T?)? validator,
   }) {
     return DropdownButtonFormField<T>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Container(

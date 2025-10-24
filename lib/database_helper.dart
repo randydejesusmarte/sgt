@@ -19,8 +19,9 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2, // INCREMENTAR VERSIÓN PARA MIGRACIÓN
       onCreate: _createDB,
+      onUpgrade: _onUpgrade, // AGREGAR MIGRACIÓN
     );
   }
 
@@ -121,6 +122,72 @@ CREATE TABLE detalle_factura (
   FOREIGN KEY (servicio_id) REFERENCES servicios (id) ON DELETE SET NULL
 )
 ''');
+
+    // TABLAS DE INVENTARIO
+    await db.execute('''
+CREATE TABLE inventario (
+  id $idType,
+  codigo $textType,
+  nombre $textType,
+  descripcion TEXT,
+  cantidad_disponible $intType,
+  precio_compra $realType,
+  precio_venta $realType,
+  categoria TEXT,
+  created_at $textType
+)
+''');
+
+    await db.execute('''
+CREATE TABLE movimientos_inventario (
+  id $idType,
+  inventario_id $intType,
+  tipo $textType,
+  cantidad $intType,
+  referencia TEXT,
+  motivo TEXT,
+  fecha $textType,
+  FOREIGN KEY (inventario_id) REFERENCES inventario (id) ON DELETE CASCADE
+)
+''');
+  }
+
+  // MIGRACIÓN DE VERSIÓN 1 A VERSIÓN 2
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
+      const textType = 'TEXT NOT NULL';
+      const realType = 'REAL NOT NULL';
+      const intType = 'INTEGER NOT NULL';
+
+      // Crear tablas de inventario
+      await db.execute('''
+CREATE TABLE inventario (
+  id $idType,
+  codigo $textType,
+  nombre $textType,
+  descripcion TEXT,
+  cantidad_disponible $intType,
+  precio_compra $realType,
+  precio_venta $realType,
+  categoria TEXT,
+  created_at $textType
+)
+''');
+
+      await db.execute('''
+CREATE TABLE movimientos_inventario (
+  id $idType,
+  inventario_id $intType,
+  tipo $textType,
+  cantidad $intType,
+  referencia TEXT,
+  motivo TEXT,
+  fecha $textType,
+  FOREIGN KEY (inventario_id) REFERENCES inventario (id) ON DELETE CASCADE
+)
+''');
+    }
   }
 
   Future close() async {

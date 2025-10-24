@@ -56,7 +56,7 @@ class HomePage extends StatelessWidget {
                     _buildMenuCard(
                       context,
                       title: 'Clientes',
-                      icon: Icons.people,
+                      icon: Icons.people_alt,
                       color: Colors.blue,
                       iconSize: iconSize,
                       fontSize: fontSize,
