@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../models.dart';
 import '../servicio_bloc.dart';
 import '../repositories.dart';
+import '../utils/volante_servicio_pdf.dart';
 
 class ServiciosPage extends StatefulWidget {
   const ServiciosPage({super.key});
@@ -191,9 +192,11 @@ class _ServiciosPageState extends State<ServiciosPage> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddServicioDialog(),
         backgroundColor: Colors.indigo.shade700,
-        
         icon: const Icon(Icons.add, color: Colors.white),
-        label: isMobile ? const SizedBox.shrink() : const Text('Nuevo Servicio', style: TextStyle(color: Colors.white)),
+        label: Text(
+          isMobile ? '' : 'Nuevo Servicio',
+          style: const TextStyle(color: Colors.white),
+        ),
       ),
     );
   }
@@ -219,7 +222,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
         shadowColor: estadoColor.withValues(alpha: 0.3),
         child: InkWell(
           onTap: () {
-            // Navegar a detalle del servicio si existe esa ruta
+            _showServicioMenu(context, servicio, cliente, vehiculo, empleado);
           },
           borderRadius: BorderRadius.circular(16),
           splashColor: estadoColor.withValues(alpha: 0.1),
@@ -241,7 +244,6 @@ class _ServiciosPageState extends State<ServiciosPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header con estado y costo
                   Row(
                     children: [
                       Container(
@@ -350,7 +352,6 @@ class _ServiciosPageState extends State<ServiciosPage> {
                   ),
                   const SizedBox(height: 16),
                   
-                  // Descripción del servicio
                   Text(
                     servicio.descripcion,
                     style: TextStyle(
@@ -361,7 +362,6 @@ class _ServiciosPageState extends State<ServiciosPage> {
                   ),
                   const SizedBox(height: 12),
                   
-                  // Información del cliente y vehículo
                   if (cliente != null && vehiculo != null) ...[
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -421,7 +421,6 @@ class _ServiciosPageState extends State<ServiciosPage> {
                     const SizedBox(height: 8),
                   ],
                   
-                  // Mecánico asignado
                   if (empleado != null)
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -458,11 +457,188 @@ class _ServiciosPageState extends State<ServiciosPage> {
                         ],
                       ),
                     ),
+                  
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        if (cliente != null && vehiculo != null) {
+                          await VolanteServicioPdf.generarVolante(
+                            cliente: cliente,
+                            vehiculo: vehiculo,
+                            servicio: servicio,
+                            empleado: empleado,
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.print, size: 18),
+                      label: const Text('Imprimir Volante'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade600,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _showServicioMenu(
+    BuildContext context,
+    Servicio servicio,
+    Cliente? cliente,
+    Vehiculo? vehiculo,
+    Empleado? empleado,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.print, color: Colors.green),
+              title: const Text('Imprimir Volante'),
+              onTap: () async {
+                Navigator.pop(context);
+                if (cliente != null && vehiculo != null) {
+                  await VolanteServicioPdf.generarVolante(
+                    cliente: cliente,
+                    vehiculo: vehiculo,
+                    servicio: servicio,
+                    empleado: empleado,
+                  );
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit, color: Colors.orange),
+              title: const Text('Editar Estado'),
+              onTap: () {
+                Navigator.pop(context);
+                _showEstadoDialog(servicio);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('Eliminar Servicio'),
+              onTap: () {
+                Navigator.pop(context);
+                _showDeleteDialog(servicio.id!);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEstadoDialog(Servicio servicio) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cambiar Estado'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildEstadoRadio('Pendiente', 'pendiente', servicio),
+            _buildEstadoRadio('En Proceso', 'en_proceso', servicio),
+            _buildEstadoRadio('Completado', 'completado', servicio),
+            _buildEstadoRadio('Cancelado', 'cancelado', servicio),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEstadoRadio(String label, String value, Servicio servicio) {
+    return RadioListTile<String>(
+      title: Text(label),
+      value: value,
+      groupValue: servicio.estado,
+      onChanged: (newValue) {
+        if (newValue != null) {
+          final updated = Servicio(
+            id: servicio.id,
+            vehiculoId: servicio.vehiculoId,
+            empleadoId: servicio.empleadoId,
+            descripcion: servicio.descripcion,
+            costo: servicio.costo,
+            fecha: servicio.fecha,
+            estado: newValue,
+            notas: servicio.notas,
+          );
+          _servicioBloc.add(UpdateServicio(updated));
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Estado actualizado a: $label'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        };
+      },
+    );
+  }
+
+  void _showDeleteDialog(int id) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar Eliminación'),
+        content: const Text('¿Estás seguro de eliminar este servicio? Esta acción no se puede deshacer.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              _servicioBloc.add(DeleteServicio(id));
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Servicio eliminado'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Eliminar'),
+          ),
+        ],
       ),
     );
   }
@@ -739,7 +915,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
     String? Function(T?)? validator,
   }) {
     return DropdownButtonFormField<T>(
-      initialValue: value,
+      value: value,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Container(

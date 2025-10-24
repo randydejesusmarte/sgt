@@ -338,3 +338,143 @@ class DetalleFactura extends Equatable {
   @override
   List<Object?> get props => [id, facturaId, servicioId, descripcion, cantidad, precioUnitario, total];
 }
+
+
+// ========== NUEVOS MODELOS PARA INVENTARIO ==========
+
+class Inventario extends Equatable {
+  final int? id;
+  final String codigo;
+  final String nombre;
+  final String? descripcion;
+  final int cantidadDisponible;
+  final double precioCompra;
+  final double precioVenta;
+  final String? categoria;
+  final DateTime createdAt;
+
+  const Inventario({
+    this.id,
+    required this.codigo,
+    required this.nombre,
+    this.descripcion,
+    required this.cantidadDisponible,
+    required this.precioCompra,
+    required this.precioVenta,
+    this.categoria,
+    required this.createdAt,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'codigo': codigo,
+      'nombre': nombre,
+      'descripcion': descripcion,
+      'cantidad_disponible': cantidadDisponible,
+      'precio_compra': precioCompra,
+      'precio_venta': precioVenta,
+      'categoria': categoria,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
+
+  factory Inventario.fromMap(Map<String, dynamic> map) {
+    return Inventario(
+      id: map['id'] as int?,
+      codigo: map['codigo'] as String,
+      nombre: map['nombre'] as String,
+      descripcion: map['descripcion'] as String?,
+      cantidadDisponible: map['cantidad_disponible'] as int,
+      precioCompra: map['precio_compra'] as double,
+      precioVenta: map['precio_venta'] as double,
+      categoria: map['categoria'] as String?,
+      createdAt: DateTime.parse(map['created_at'] as String),
+    );
+  }
+
+  Inventario copyWith({
+    int? id,
+    String? codigo,
+    String? nombre,
+    String? descripcion,
+    int? cantidadDisponible,
+    double? precioCompra,
+    double? precioVenta,
+    String? categoria,
+    DateTime? createdAt,
+  }) {
+    return Inventario(
+      id: id ?? this.id,
+      codigo: codigo ?? this.codigo,
+      nombre: nombre ?? this.nombre,
+      descripcion: descripcion ?? this.descripcion,
+      cantidadDisponible: cantidadDisponible ?? this.cantidadDisponible,
+      precioCompra: precioCompra ?? this.precioCompra,
+      precioVenta: precioVenta ?? this.precioVenta,
+      categoria: categoria ?? this.categoria,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+        id,
+        codigo,
+        nombre,
+        descripcion,
+        cantidadDisponible,
+        precioCompra,
+        precioVenta,
+        categoria,
+        createdAt
+      ];
+}
+
+
+class MovimientoInventario extends Equatable {
+  final int? id;
+  final int inventarioId;
+  final String tipo; // 'entrada' o 'salida'
+  final int cantidad;
+  final String? referencia; // Puede ser ID de factura, compra, etc.
+  final String? motivo;
+  final DateTime fecha;
+
+  const MovimientoInventario({
+    this.id,
+    required this.inventarioId,
+    required this.tipo,
+    required this.cantidad,
+    this.referencia,
+    this.motivo,
+    required this.fecha,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'inventario_id': inventarioId,
+      'tipo': tipo,
+      'cantidad': cantidad,
+      'referencia': referencia,
+      'motivo': motivo,
+      'fecha': fecha.toIso8601String(),
+    };
+  }
+
+  factory MovimientoInventario.fromMap(Map<String, dynamic> map) {
+    return MovimientoInventario(
+      id: map['id'] as int?,
+      inventarioId: map['inventario_id'] as int,
+      tipo: map['tipo'] as String,
+      cantidad: map['cantidad'] as int,
+      referencia: map['referencia'] as String?,
+      motivo: map['motivo'] as String?,
+      fecha: DateTime.parse(map['fecha'] as String),
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, inventarioId, tipo, cantidad, referencia, motivo, fecha];
+}

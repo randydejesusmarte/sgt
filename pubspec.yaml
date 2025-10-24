@@ -10,26 +10,21 @@ dependencies:
   flutter:
     sdk: flutter
   
-  # Arquitectura
+  # Dependencias existentes
   flutter_modular: ^6.3.4
   flutter_bloc: ^9.1.1
-  
-  # Base de datos
+  equatable: ^2.0.5
   sqflite: ^2.3.0
-  sqflite_common_ffi: ^2.3.6
   path: ^1.8.3
-  
-  # UI
-  cupertino_icons: ^1.0.6
   intl: ^0.20.2
   
-  # Utilidades
-  equatable: ^2.0.5
+  # NUEVAS DEPENDENCIAS
+  pdf: ^3.10.4              # Para generar PDFs
+  printing: ^5.11.0         # Para imprimir y previsualizar PDFs
+  path_provider: ^2.1.1     # Para acceder a directorios del sistema
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
-
-flutter:
-  uses-material-design: true
+  
+  sqflite_common_ffi: ^2.3.0  # Para testing en desktop

@@ -16,6 +16,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
   final FacturaBloc _bloc = Modular.get<FacturaBloc>();
   final FacturaRepository _facturaRepo = Modular.get<FacturaRepository>();
   final ClienteRepository _clienteRepo = Modular.get<ClienteRepository>();
+  final InventarioRepository _inventarioRepo = Modular.get<InventarioRepository>();
 
   List<Cliente> _clientes = [];
   Cliente? _clienteSeleccionado;
@@ -41,7 +42,145 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
   double get impuesto => subtotal * (_tasaImpuesto / 100);
   double get total => subtotal + impuesto - _descuento;
 
-  void _agregarDetalle() {
+  void _agregarDetalleDesdeInventario() async {
+    final inventarioItems = await _inventarioRepo.getDisponibles();
+    
+    if (inventarioItems.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No hay artículos disponibles en el inventario'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    Inventario? itemSeleccionado;
+    final cantidadController = TextEditingController(text: '1');
+    final precioController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Seleccionar del Inventario'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<Inventario>(
+                  decoration: const InputDecoration(
+                    labelText: 'Artículo',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.inventory_2),
+                  ),
+                  items: inventarioItems.map((item) {
+                    return DropdownMenuItem(
+                      value: item,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(item.nombre),
+                          Text(
+                            'Disponible: ${item.cantidadDisponible} | \$${item.precioVenta.toStringAsFixed(2)}',
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      itemSeleccionado = value;
+                      if (value != null) {
+                        precioController.text = value.precioVenta.toStringAsFixed(2);
+                      }
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: cantidadController,
+                  decoration: InputDecoration(
+                    labelText: 'Cantidad',
+                    border: const OutlineInputBorder(),
+                    suffixText: itemSeleccionado != null
+                        ? 'Disp: ${itemSeleccionado!.cantidadDisponible}'
+                        : null,
+                  ),
+                  keyboardType: TextInputType.number,
+                  onChanged: (value) {
+                    if (itemSeleccionado != null && value.isNotEmpty) {
+                      final cantidad = int.tryParse(value) ?? 0;
+                      if (cantidad > itemSeleccionado!.cantidadDisponible) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Cantidad mayor a la disponible'),
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: precioController,
+                  decoration: const InputDecoration(
+                    labelText: 'Precio unitario',
+                    border: OutlineInputBorder(),
+                    prefixText: '\$',
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (itemSeleccionado != null &&
+                    cantidadController.text.isNotEmpty &&
+                    precioController.text.isNotEmpty) {
+                  final cantidad = int.parse(cantidadController.text);
+                  final precio = double.parse(precioController.text);
+                  
+                  if (cantidad > itemSeleccionado!.cantidadDisponible) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Cantidad insuficiente en inventario'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+
+                  setState(() {
+                    _detalles.add(DetalleFactura(
+                      facturaId: 0,
+                      descripcion: '${itemSeleccionado!.nombre} (${itemSeleccionado!.codigo})',
+                      cantidad: cantidad,
+                      precioUnitario: precio,
+                      total: cantidad * precio,
+                    ));
+                  });
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Agregar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _agregarDetalleManual() {
     final descripcionController = TextEditingController();
     final cantidadController = TextEditingController(text: '1');
     final precioController = TextEditingController();
@@ -49,7 +188,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Agregar Item'),
+        title: const Text('Agregar Item Manual'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -114,8 +253,30 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
     );
   }
 
-  void _guardarFactura() {
-    if (_formKey.currentState!.validate() && _clienteSeleccionado != null && _detalles.isNotEmpty) {
+  void _guardarFactura() async {
+    if (_formKey.currentState!.validate() && 
+        _clienteSeleccionado != null && 
+        _detalles.isNotEmpty) {
+      
+      // Verificar disponibilidad de inventario
+      for (var detalle in _detalles) {
+        // Si el detalle tiene un código de inventario en la descripción
+        final match = RegExp(r'\(([^)]+)\)').firstMatch(detalle.descripcion);
+        if (match != null) {
+          final codigo = match.group(1);
+          final item = await _inventarioRepo.getByCodigo(codigo!);
+          if (item != null && item.cantidadDisponible < detalle.cantidad) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Cantidad insuficiente de ${item.nombre}'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            return;
+          }
+        }
+      }
+
       final factura = Factura(
         clienteId: _clienteSeleccionado!.id!,
         numeroFactura: _numeroFactura,
@@ -128,6 +289,24 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
       );
 
       _bloc.add(AddFactura(factura, _detalles));
+
+      // Descontar del inventario
+      for (var detalle in _detalles) {
+        final match = RegExp(r'\(([^)]+)\)').firstMatch(detalle.descripcion);
+        if (match != null) {
+          final codigo = match.group(1);
+          final item = await _inventarioRepo.getByCodigo(codigo!);
+          if (item != null) {
+            await _inventarioRepo.ajustarCantidad(
+              item.id!,
+              detalle.cantidad,
+              'salida',
+              referencia: 'Factura: $_numeroFactura',
+              motivo: 'Venta',
+            );
+          }
+        }
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -193,7 +372,6 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<Cliente>(
-                      initialValue: _clienteSeleccionado,
                       decoration: const InputDecoration(
                         labelText: 'Cliente *',
                         border: OutlineInputBorder(),
@@ -222,14 +400,36 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        ElevatedButton.icon(
-                          onPressed: _agregarDetalle,
-                          icon: const Icon(Icons.add),
-                          label: const Text('Agregar Item'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.purple.shade700,
-                            foregroundColor: Colors.white,
-                          ),
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: _agregarDetalleDesdeInventario,
+                              icon: const Icon(Icons.inventory_2, size: 18),
+                              label: const Text('Inventario'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.purple.shade700,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                              ),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: _agregarDetalleManual,
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text('Manual'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.purple.shade500,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -248,6 +448,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
                         final index = entry.key;
                         final detalle = entry.value;
                         return Card(
+                          margin: const EdgeInsets.only(bottom: 8),
                           child: ListTile(
                             title: Text(detalle.descripcion),
                             subtitle: Text(

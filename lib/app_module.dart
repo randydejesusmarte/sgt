@@ -16,6 +16,7 @@ import 'pages/cliente_detalle_page.dart';
 import 'pages/reportes_page.dart';
 import 'pages/empleados_page.dart';
 import 'pages/servicios_page.dart';
+import 'pages/inventario_page.dart';
 
 class AppModule extends Module {
   @override
@@ -28,6 +29,10 @@ class AppModule extends Module {
     i.addSingleton(FacturaRepository.new);
     i.addSingleton(DetalleFacturaRepository.new);
     i.addSingleton(EmpleadoRepository.new);
+    
+    // NUEVOS REPOSITORIOS DE INVENTARIO
+    i.addSingleton(InventarioRepository.new);
+    i.addSingleton(MovimientoInventarioRepository.new);
     
     // BLoCs
     i.addLazySingleton(() => ClienteBloc(i.get<ClienteRepository>()));
@@ -60,5 +65,8 @@ class AppModule extends Module {
     r.child('/reportes', child: (context) => const ReportesPage());
     r.child('/empleados', child: (context) => const EmpleadosPage());
     r.child('/servicios', child: (context) => const ServiciosPage());
+    
+    // NUEVA RUTA DE INVENTARIO
+    r.child('/inventario', child: (context) => const InventarioPage());
   }
 }
