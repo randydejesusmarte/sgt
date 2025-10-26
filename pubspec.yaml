@@ -11,13 +11,14 @@ dependencies:
     sdk: flutter
   
   # Dependencias existentes
-  flutter_lints: ^6.0.0
   flutter_modular: ^6.3.4
   flutter_bloc: ^9.1.1
   equatable: ^2.0.5
   sqflite: ^2.3.0
   path: ^1.8.3
   intl: ^0.20.2
+
+  sqflite_common_ffi: ^2.3.6  # Para testing en desktop
   
   # NUEVAS DEPENDENCIAS
   pdf: ^3.10.4              # Para generar PDFs
@@ -27,5 +28,6 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  
-  sqflite_common_ffi: ^2.3.0  # Para testing en desktop
+
+flutter: 
+  uses-material-design: true

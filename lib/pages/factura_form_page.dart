@@ -13,10 +13,11 @@ class FacturaFormPage extends StatefulWidget {
 
 class _FacturaFormPageState extends State<FacturaFormPage> {
   final _formKey = GlobalKey<FormState>();
-  final FacturaBloc _bloc = Modular.get<FacturaBloc>();
+  late final FacturaBloc _bloc;
   final FacturaRepository _facturaRepo = Modular.get<FacturaRepository>();
   final ClienteRepository _clienteRepo = Modular.get<ClienteRepository>();
   final InventarioRepository _inventarioRepo = Modular.get<InventarioRepository>();
+  bool _guardando = false;
 
   List<Cliente> _clientes = [];
   Cliente? _clienteSeleccionado;
@@ -29,6 +30,29 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
   @override
   void initState() {
     super.initState();
+    _bloc = Modular.get<FacturaBloc>();
+    _bloc.stream.listen((state) {
+      if (state is FacturaError) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${state.message}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } else if (state is FacturaLoaded) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Factura guardada exitosamente'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.of(context).pop();
+        }
+      }
+    });
     _loadData();
   }
 
@@ -257,65 +281,71 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
     if (_formKey.currentState!.validate() && 
         _clienteSeleccionado != null && 
         _detalles.isNotEmpty) {
+      if (_guardando) return; // Evitar doble guardado
+      setState(() => _guardando = true);
       
-      // Verificar disponibilidad de inventario
-      for (var detalle in _detalles) {
-        // Si el detalle tiene un código de inventario en la descripción
-        final match = RegExp(r'\(([^)]+)\)').firstMatch(detalle.descripcion);
-        if (match != null) {
-          final codigo = match.group(1);
-          final item = await _inventarioRepo.getByCodigo(codigo!);
-          if (item != null && item.cantidadDisponible < detalle.cantidad) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Cantidad insuficiente de ${item.nombre}'),
-                backgroundColor: Colors.red,
-              ),
-            );
-            return;
+      try {
+        // Verificar disponibilidad de inventario
+        for (var detalle in _detalles) {
+          final match = RegExp(r'\(([^)]+)\)').firstMatch(detalle.descripcion);
+          if (match != null) {
+            final codigo = match.group(1);
+            final item = await _inventarioRepo.getByCodigo(codigo!);
+            if (item != null && item.cantidadDisponible < detalle.cantidad) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Cantidad insuficiente de ${item.nombre}'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              setState(() => _guardando = false);
+              return;
+            }
           }
         }
-      }
 
-      final factura = Factura(
-        clienteId: _clienteSeleccionado!.id!,
-        numeroFactura: _numeroFactura,
-        fecha: DateTime.now(),
-        subtotal: subtotal,
-        impuesto: impuesto,
-        descuento: _descuento,
-        total: total,
-        estado: 'pendiente',
-      );
+        // Crear la factura primero
+        final factura = Factura(
+          clienteId: _clienteSeleccionado!.id!,
+          numeroFactura: _numeroFactura,
+          fecha: DateTime.now(),
+          subtotal: subtotal,
+          impuesto: impuesto,
+          descuento: _descuento,
+          total: total,
+          estado: 'pendiente',
+        );
 
-      _bloc.add(AddFactura(factura, _detalles));
-
-      // Descontar del inventario
-      for (var detalle in _detalles) {
-        final match = RegExp(r'\(([^)]+)\)').firstMatch(detalle.descripcion);
-        if (match != null) {
-          final codigo = match.group(1);
-          final item = await _inventarioRepo.getByCodigo(codigo!);
-          if (item != null) {
-            await _inventarioRepo.ajustarCantidad(
-              item.id!,
-              detalle.cantidad,
-              'salida',
-              referencia: 'Factura: $_numeroFactura',
-              motivo: 'Venta',
-            );
+        // Actualizar inventario antes de guardar la factura
+        for (var detalle in _detalles) {
+          final match = RegExp(r'\(([^)]+)\)').firstMatch(detalle.descripcion);
+          if (match != null) {
+            final codigo = match.group(1);
+            final item = await _inventarioRepo.getByCodigo(codigo!);
+            if (item != null) {
+              await _inventarioRepo.ajustarCantidad(
+                item.id!,
+                detalle.cantidad,
+                'salida',
+                referencia: 'Factura: $_numeroFactura',
+                motivo: 'Venta',
+              );
+            }
           }
         }
+
+        // Usar el BLoC para guardar la factura y sus detalles
+        _bloc.add(AddFactura(factura, _detalles));
+        
+      } catch (e) {
+        setState(() => _guardando = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al guardar la factura: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Factura creada exitosamente'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      Modular.to.navigate('/facturas');
     } else if (_clienteSeleccionado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Selecciona un cliente')),
