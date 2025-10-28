@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
+import 'dart:async';
 import '../models.dart';
 import '../factura_bloc.dart';
 import '../repositories.dart';
@@ -14,68 +15,130 @@ class FacturaFormPage extends StatefulWidget {
 class _FacturaFormPageState extends State<FacturaFormPage> {
   final _formKey = GlobalKey<FormState>();
   late final FacturaBloc _bloc;
-  final FacturaRepository _facturaRepo = Modular.get<FacturaRepository>();
   final ClienteRepository _clienteRepo = Modular.get<ClienteRepository>();
+  final ServicioRepository _servicioRepo = Modular.get<ServicioRepository>();
+  final VehiculoRepository _vehiculoRepo = Modular.get<VehiculoRepository>();
   final InventarioRepository _inventarioRepo = Modular.get<InventarioRepository>();
   bool _guardando = false;
 
   List<Cliente> _clientes = [];
   Cliente? _clienteSeleccionado;
+  Servicio? _servicioSeleccionado;
+  List<Servicio> _serviciosCliente = [];
   final List<DetalleFactura> _detalles = [];
   
-  final double _tasaImpuesto = 18.0; // ITBIS 18%
+  final double _tasaImpuesto = 18.0;
   double _descuento = 0.0;
   String _numeroFactura = '';
+
+  late StreamSubscription<FacturaState>? _blocSubscription;
 
   @override
   void initState() {
     super.initState();
     _bloc = Modular.get<FacturaBloc>();
-    _bloc.stream.listen((state) {
-      if (state is FacturaError) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: ${state.message}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      } else if (state is FacturaLoaded) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Factura guardada exitosamente'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          Navigator.of(context).pop();
-        }
-      }
-    });
+    _setupBlocListener();
     _loadData();
   }
 
+  void _setupBlocListener() {
+    _blocSubscription = _bloc.stream.listen((state) {
+      if (!mounted) return;
+      
+      if (state is FacturaLoaded) {
+        setState(() => _guardando = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Factura guardada exitosamente'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Modular.to.navigate('/facturas');
+      } else if (state is FacturaError) {
+        setState(() => _guardando = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${state.message}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _blocSubscription?.cancel();
+    super.dispose();
+  }
+
   Future<void> _loadData() async {
-    _clientes = await _clienteRepo.getAll();
-    _numeroFactura = await _facturaRepo.getNextNumeroFactura();
-    setState(() {});
+    try {
+      _clientes = await _clienteRepo.getAll();
+      final facturaRepo = Modular.get<FacturaRepository>();
+      _numeroFactura = await facturaRepo.getNextNumeroFactura();
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar datos: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _cargarServiciosCliente(int clienteId) async {
+    try {
+      // Obtener todos los vehículos del cliente
+      final vehiculos = await _vehiculoRepo.getByClienteId(clienteId);
+      
+      // Obtener todos los servicios de esos vehículos que estén completados
+      List<Servicio> servicios = [];
+      for (var vehiculo in vehiculos) {
+        final serviciosVehiculo = await _servicioRepo.getByVehiculoId(vehiculo.id!);
+        // Solo servicios completados
+        servicios.addAll(serviciosVehiculo.where((s) => s.estado == 'completado'));
+      }
+      
+      if (mounted) {
+        setState(() {
+          _serviciosCliente = servicios;
+          _servicioSeleccionado = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar servicios: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   double get subtotal => _detalles.fold(0, (sum, d) => sum + d.total);
   double get impuesto => subtotal * (_tasaImpuesto / 100);
   double get total => subtotal + impuesto - _descuento;
 
-  void _agregarDetalleDesdeInventario() async {
+  void _agregarItemInventario() async {
     final inventarioItems = await _inventarioRepo.getDisponibles();
     
     if (inventarioItems.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No hay artículos disponibles en el inventario'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No hay artículos disponibles en el inventario'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
       return;
     }
 
@@ -83,11 +146,13 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
     final cantidadController = TextEditingController(text: '1');
     final precioController = TextEditingController();
 
+    if (!mounted) return;
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Seleccionar del Inventario'),
+          title: const Text('Agregar Item del Inventario'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -134,19 +199,6 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
                         : null,
                   ),
                   keyboardType: TextInputType.number,
-                  onChanged: (value) {
-                    if (itemSeleccionado != null && value.isNotEmpty) {
-                      final cantidad = int.tryParse(value) ?? 0;
-                      if (cantidad > itemSeleccionado!.cantidadDisponible) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Cantidad mayor a la disponible'),
-                            duration: Duration(seconds: 1),
-                          ),
-                        );
-                      }
-                    }
-                  },
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -171,8 +223,18 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
                 if (itemSeleccionado != null &&
                     cantidadController.text.isNotEmpty &&
                     precioController.text.isNotEmpty) {
-                  final cantidad = int.parse(cantidadController.text);
-                  final precio = double.parse(precioController.text);
+                  final cantidad = int.tryParse(cantidadController.text) ?? 0;
+                  final precio = double.tryParse(precioController.text) ?? 0;
+                  
+                  if (cantidad <= 0 || precio <= 0) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Cantidad y precio deben ser mayores a 0'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
                   
                   if (cantidad > itemSeleccionado!.cantidadDisponible) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -187,7 +249,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
                   setState(() {
                     _detalles.add(DetalleFactura(
                       facturaId: 0,
-                      descripcion: '${itemSeleccionado!.nombre} (${itemSeleccionado!.codigo})',
+                      descripcion: '${itemSeleccionado!.nombre} (Inventario: ${itemSeleccionado!.codigo})',
                       cantidad: cantidad,
                       precioUnitario: precio,
                       total: cantidad * precio,
@@ -204,156 +266,122 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
     );
   }
 
-  void _agregarDetalleManual() {
-    final descripcionController = TextEditingController();
-    final cantidadController = TextEditingController(text: '1');
-    final precioController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Agregar Item Manual'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: descripcionController,
-                decoration: const InputDecoration(
-                  labelText: 'Descripción',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: cantidadController,
-                decoration: const InputDecoration(
-                  labelText: 'Cantidad',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: precioController,
-                decoration: const InputDecoration(
-                  labelText: 'Precio unitario',
-                  border: OutlineInputBorder(),
-                  prefixText: '\$',
-                ),
-                keyboardType: TextInputType.number,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              if (descripcionController.text.isNotEmpty &&
-                  cantidadController.text.isNotEmpty &&
-                  precioController.text.isNotEmpty) {
-                final cantidad = int.parse(cantidadController.text);
-                final precio = double.parse(precioController.text);
-                setState(() {
-                  _detalles.add(DetalleFactura(
-                    facturaId: 0,
-                    descripcion: descripcionController.text,
-                    cantidad: cantidad,
-                    precioUnitario: precio,
-                    total: cantidad * precio,
-                  ));
-                });
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Agregar'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _guardarFactura() async {
-    if (_formKey.currentState!.validate() && 
-        _clienteSeleccionado != null && 
-        _detalles.isNotEmpty) {
-      if (_guardando) return; // Evitar doble guardado
-      setState(() => _guardando = true);
-      
-      try {
-        // Verificar disponibilidad de inventario
-        for (var detalle in _detalles) {
-          final match = RegExp(r'\(([^)]+)\)').firstMatch(detalle.descripcion);
-          if (match != null) {
-            final codigo = match.group(1);
-            final item = await _inventarioRepo.getByCodigo(codigo!);
-            if (item != null && item.cantidadDisponible < detalle.cantidad) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Cantidad insuficiente de ${item.nombre}'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-              setState(() => _guardando = false);
-              return;
-            }
-          }
-        }
-
-        // Crear la factura primero
-        final factura = Factura(
-          clienteId: _clienteSeleccionado!.id!,
-          numeroFactura: _numeroFactura,
-          fecha: DateTime.now(),
-          subtotal: subtotal,
-          impuesto: impuesto,
-          descuento: _descuento,
-          total: total,
-          estado: 'pendiente',
-        );
-
-        // Actualizar inventario antes de guardar la factura
-        for (var detalle in _detalles) {
-          final match = RegExp(r'\(([^)]+)\)').firstMatch(detalle.descripcion);
-          if (match != null) {
-            final codigo = match.group(1);
-            final item = await _inventarioRepo.getByCodigo(codigo!);
-            if (item != null) {
-              await _inventarioRepo.ajustarCantidad(
-                item.id!,
-                detalle.cantidad,
-                'salida',
-                referencia: 'Factura: $_numeroFactura',
-                motivo: 'Venta',
-              );
-            }
-          }
-        }
-
-        // Usar el BLoC para guardar la factura y sus detalles
-        _bloc.add(AddFactura(factura, _detalles));
-        
-      } catch (e) {
-        setState(() => _guardando = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al guardar la factura: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } else if (_clienteSeleccionado == null) {
+    if (_guardando) return;
+    
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    
+    if (_clienteSeleccionado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Selecciona un cliente')),
       );
-    } else if (_detalles.isEmpty) {
+      return;
+    }
+    
+    if (_servicioSeleccionado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Agrega al menos un item')),
+        const SnackBar(content: Text('Selecciona un servicio')),
       );
+      return;
+    }
+    
+    if (_detalles.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Agrega al menos un item del inventario')),
+      );
+      return;
+    }
+
+    setState(() => _guardando = true);
+    
+    try {
+      // Verificar disponibilidad de inventario antes de guardar
+      for (var detalle in _detalles) {
+        if (detalle.descripcion.contains('Inventario:')) {
+          final match = RegExp(r'Inventario:\s*([^)]+)').firstMatch(detalle.descripcion);
+          if (match != null) {
+            final codigo = match.group(1)?.trim();
+            if (codigo != null) {
+              final item = await _inventarioRepo.getByCodigo(codigo);
+              if (item == null) {
+                throw Exception('Item no encontrado: $codigo');
+              }
+              if (item.cantidadDisponible < detalle.cantidad) {
+                throw Exception('Cantidad insuficiente de ${item.nombre}. Disponible: ${item.cantidadDisponible}');
+              }
+            }
+          }
+        }
+      }
+
+      // Agregar el servicio como primer detalle
+      final vehiculo = await _vehiculoRepo.getById(_servicioSeleccionado!.vehiculoId);
+      final detallesConServicio = [
+        DetalleFactura(
+          facturaId: 0,
+          servicioId: _servicioSeleccionado!.id,
+          descripcion: '${_servicioSeleccionado!.descripcion} - ${vehiculo?.marca ?? ''} ${vehiculo?.modelo ?? ''} (${vehiculo?.placa ?? ''})',
+          cantidad: 1,
+          precioUnitario: _servicioSeleccionado!.costo,
+          total: _servicioSeleccionado!.costo,
+        ),
+        ..._detalles,
+      ];
+
+      final subtotalTotal = subtotal + _servicioSeleccionado!.costo;
+      final impuestoTotal = subtotalTotal * (_tasaImpuesto / 100);
+      final totalFinal = subtotalTotal + impuestoTotal - _descuento;
+
+      // Crear la factura
+      final factura = Factura(
+        clienteId: _clienteSeleccionado!.id!,
+        numeroFactura: _numeroFactura,
+        fecha: DateTime.now(),
+        subtotal: subtotalTotal,
+        impuesto: impuestoTotal,
+        descuento: _descuento,
+        total: totalFinal,
+        estado: 'pendiente',
+      );
+
+      // Actualizar inventario ANTES de guardar la factura
+      for (var detalle in _detalles) {
+        if (detalle.descripcion.contains('Inventario:')) {
+          final match = RegExp(r'Inventario:\s*([^)]+)').firstMatch(detalle.descripcion);
+          if (match != null) {
+            final codigo = match.group(1)?.trim();
+            if (codigo != null) {
+              final item = await _inventarioRepo.getByCodigo(codigo);
+              if (item != null) {
+                await _inventarioRepo.ajustarCantidad(
+                  item.id!,
+                  detalle.cantidad,
+                  'salida',
+                  referencia: 'Factura: $_numeroFactura',
+                  motivo: 'Venta - Servicio: ${_servicioSeleccionado!.descripcion}',
+                );
+              }
+            }
+          }
+        }
+      }
+
+      // Guardar usando el BLoC (esto disparará el listener)
+      _bloc.add(AddFactura(factura, detallesConServicio));
+      
+    } catch (e) {
+      setState(() => _guardando = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     }
   }
 
@@ -363,7 +391,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Modular.to.navigate('/'),
+          onPressed: () => Modular.to.navigate('/facturas'),
         ),
         title: const Text('Nueva Factura'),
         backgroundColor: Colors.purple.shade700,
@@ -414,193 +442,268 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
                         );
                       }).toList(),
                       onChanged: (value) {
-                        setState(() => _clienteSeleccionado = value);
+                        setState(() {
+                          _clienteSeleccionado = value;
+                          _servicioSeleccionado = null;
+                          _serviciosCliente = [];
+                        });
+                        if (value != null) {
+                          _cargarServiciosCliente(value.id!);
+                        }
                       },
                       validator: (value) =>
                           value == null ? 'Selecciona un cliente' : null,
                     ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Items',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                    const SizedBox(height: 16),
+                    if (_clienteSeleccionado != null) ...[
+                      DropdownButtonFormField<Servicio>(
+                        decoration: const InputDecoration(
+                          labelText: 'Servicio Completado *',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.build),
                         ),
-                        Wrap(
-                          spacing: 8,
-                          children: [
-                            ElevatedButton.icon(
-                              onPressed: _agregarDetalleDesdeInventario,
-                              icon: const Icon(Icons.inventory_2, size: 18),
-                              label: const Text('Inventario'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.purple.shade700,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
+                        value: _servicioSeleccionado,
+                        items: _serviciosCliente.map((servicio) {
+                          return DropdownMenuItem(
+                            value: servicio,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(servicio.descripcion),
+                                Text(
+                                  '\$${servicio.costo.toStringAsFixed(2)}',
+                                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                                 ),
-                              ),
+                              ],
                             ),
-                            ElevatedButton.icon(
-                              onPressed: _agregarDetalleManual,
-                              icon: const Icon(Icons.add, size: 18),
-                              label: const Text('Manual'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.purple.shade500,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    if (_detalles.isEmpty)
-                      const Card(
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() => _servicioSeleccionado = value);
+                        },
+                        validator: (value) =>
+                            value == null ? 'Selecciona un servicio' : null,
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                    if (_servicioSeleccionado != null) ...[
+                      Card(
+                        color: Colors.blue.shade50,
                         child: Padding(
-                          padding: EdgeInsets.all(32),
-                          child: Center(
-                            child: Text('No hay items agregados'),
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Servicio Seleccionado:',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(_servicioSeleccionado!.descripcion),
+                              Text(
+                                'Costo: \$${_servicioSeleccionado!.costo.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  color: Colors.blue.shade700,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      )
-                    else
-                      ..._detalles.asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final detalle = entry.value;
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: ListTile(
-                            title: Text(detalle.descripcion),
-                            subtitle: Text(
-                              'Cant: ${detalle.cantidad} × \$${detalle.precioUnitario.toStringAsFixed(2)}',
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  '\$${detalle.total.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete, color: Colors.red),
-                                  onPressed: () {
-                                    setState(() => _detalles.removeAt(index));
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }),
-                    const SizedBox(height: 24),
-                    Card(
-                      color: Colors.purple.shade50,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Subtotal:'),
-                                Text(
-                                  '\$${subtotal.toStringAsFixed(2)}',
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text('Impuesto ($_tasaImpuesto%):'),
-                                Text(
-                                  '\$${impuesto.toStringAsFixed(2)}',
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Descuento:'),
-                                SizedBox(
-                                  width: 100,
-                                  child: TextField(
-                                    keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(
-                                      prefixText: '\$',
-                                      isDense: true,
-                                    ),
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _descuento = double.tryParse(value) ?? 0;
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const Divider(height: 24),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  'TOTAL:',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  '\$${total.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.purple.shade700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Items Utilizados',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: _agregarItemInventario,
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text('Agregar'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.purple.shade700,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (_detalles.isEmpty)
+                        const Card(
+                          child: Padding(
+                            padding: EdgeInsets.all(32),
+                            child: Center(
+                              child: Text('No hay items agregados del inventario'),
+                            ),
+                          ),
+                        )
+                      else
+                        ..._detalles.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final detalle = entry.value;
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            child: ListTile(
+                              title: Text(detalle.descripcion),
+                              subtitle: Text(
+                                'Cant: ${detalle.cantidad} × \$${detalle.precioUnitario.toStringAsFixed(2)}',
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '\$${detalle.total.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                    onPressed: () {
+                                      setState(() => _detalles.removeAt(index));
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
+                      const SizedBox(height: 24),
+                      Card(
+                        color: Colors.purple.shade50,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Servicio:'),
+                                  Text(
+                                    '\$${_servicioSeleccionado!.costo.toStringAsFixed(2)}',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Items:'),
+                                  Text(
+                                    '\$${subtotal.toStringAsFixed(2)}',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              const Divider(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Subtotal:'),
+                                  Text(
+                                    '\$${(subtotal + _servicioSeleccionado!.costo).toStringAsFixed(2)}',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('Impuesto ($_tasaImpuesto%):'),
+                                  Text(
+                                    '\$${((subtotal + _servicioSeleccionado!.costo) * (_tasaImpuesto / 100)).toStringAsFixed(2)}',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Descuento:'),
+                                  SizedBox(
+                                    width: 100,
+                                    child: TextField(
+                                      keyboardType: TextInputType.number,
+                                      decoration: const InputDecoration(
+                                        prefixText: '\$',
+                                        isDense: true,
+                                      ),
+                                      onChanged: (value) {
+                                        setState(() {
+                                          _descuento = double.tryParse(value) ?? 0;
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const Divider(height: 24),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'TOTAL:',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    '\$${((subtotal + _servicioSeleccionado!.costo) + ((subtotal + _servicioSeleccionado!.costo) * (_tasaImpuesto / 100)) - _descuento).toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.purple.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
             ),
-            Container(
-              padding: const EdgeInsets.all(16),
-              child: ElevatedButton(
-                onPressed: _guardarFactura,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.purple.shade700,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+            if (_servicioSeleccionado != null)
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: ElevatedButton(
+                  onPressed: _guardando ? null : _guardarFactura,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple.shade700,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                ),
-                child: const Text(
-                  'Guardar Factura',
-                  style: TextStyle(fontSize: 18, color: Colors.white),
+                  child: _guardando
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          'Guardar Factura',
+                          style: TextStyle(fontSize: 18, color: Colors.white),
+                        ),
                 ),
               ),
-            ),
           ],
         ),
       ),

@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:intl/intl.dart';
 import '../factura_bloc.dart';
+import '../repositories.dart';
+import '../utils/factura_pdf.dart';
 
 class FacturasPage extends StatefulWidget {
   const FacturasPage({super.key});
@@ -31,6 +33,61 @@ class _FacturasPageState extends State<FacturasPage> {
         return Colors.red;
       default:
         return Colors.grey;
+    }
+  }
+
+  Future<void> _imprimirFactura(dynamic factura) async {
+    try {
+      final clienteRepo = Modular.get<ClienteRepository>();
+      final detalleRepo = Modular.get<DetalleFacturaRepository>();
+      final servicioRepo = Modular.get<ServicioRepository>();
+      final vehiculoRepo = Modular.get<VehiculoRepository>();
+
+      final cliente = await clienteRepo.getById(factura.clienteId);
+      final detalles = await detalleRepo.getByFacturaId(factura.id);
+      
+      if (cliente == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No se encontró información del cliente'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Buscar el servicio en los detalles
+      dynamic servicio;
+      dynamic vehiculo;
+      
+      for (var detalle in detalles) {
+        if (detalle.servicioId != null) {
+          servicio = await servicioRepo.getById(detalle.servicioId!);
+          if (servicio != null) {
+            vehiculo = await vehiculoRepo.getById(servicio.vehiculoId);
+            break;
+          }
+        }
+      }
+
+      await FacturaPdf.generarFactura(
+        factura: factura,
+        cliente: cliente,
+        detalles: detalles,
+        servicio: servicio,
+        vehiculo: vehiculo,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al generar factura: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -67,7 +124,21 @@ class _FacturasPageState extends State<FacturasPage> {
           }
 
           if (state is FacturaError) {
-            return Center(child: Text('Error: ${state.message}'));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text('Error: ${state.message}'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => _bloc.add(LoadFacturas()),
+                    child: const Text('Reintentar'),
+                  ),
+                ],
+              ),
+            );
           }
 
           if (state is FacturaLoaded) {
@@ -225,11 +296,32 @@ class _FacturasPageState extends State<FacturasPage> {
   void _showFacturaMenu(BuildContext context, factura) {
     showModalBottomSheet(
       context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) => Container(
         padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.print, color: Colors.blue),
+              title: const Text('Imprimir Factura'),
+              onTap: () {
+                Navigator.pop(context);
+                _imprimirFactura(factura);
+              },
+            ),
+            const Divider(),
             ListTile(
               leading: const Icon(Icons.check_circle, color: Colors.green),
               title: const Text('Marcar como pagada'),

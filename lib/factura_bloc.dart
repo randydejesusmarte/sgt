@@ -100,11 +100,15 @@ class FacturaBloc extends Bloc<FacturaEvent, FacturaState> {
 
   Future<void> _onAddFactura(AddFactura event, Emitter<FacturaState> emit) async {
     try {
-      emit(FacturaLoading());
+      // NO emitir loading aquí para no bloquear la UI
       
       // Crear la factura
       final facturaId = await facturaRepository.create(event.factura);
-      if (facturaId <= 0) throw Exception('Error al crear la factura');
+      
+      if (facturaId <= 0) {
+        emit(FacturaError('Error al crear la factura'));
+        return;
+      }
 
       // Crear los detalles
       for (var detalle in event.detalles) {
@@ -118,19 +122,22 @@ class FacturaBloc extends Bloc<FacturaEvent, FacturaState> {
         );
         
         final detalleId = await detalleRepository.create(detalleToCreate);
+        
         if (detalleId <= 0) {
           // Si falla la creación de un detalle, eliminar la factura y sus detalles
+          await detalleRepository.deleteByFacturaId(facturaId);
           await facturaRepository.delete(facturaId);
-          throw Exception('Error al crear el detalle de la factura');
+          emit(FacturaError('Error al crear los detalles de la factura'));
+          return;
         }
       }
 
       // Cargar la lista actualizada de facturas
       final facturas = await facturaRepository.getAll();
       emit(FacturaLoaded(facturas));
+      
     } catch (e) {
-      emit(FacturaError(e.toString()));
-      rethrow; // Re-throw to handle in UI
+      emit(FacturaError('Error al guardar la factura: ${e.toString()}'));
     }
   }
 
