@@ -31,35 +31,53 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
   double _descuento = 0.0;
   String _numeroFactura = '';
 
-  late StreamSubscription<FacturaState>? _blocSubscription;
+  StreamSubscription<FacturaState>? _blocSubscription;
 
   @override
   void initState() {
     super.initState();
+    print('📱 FacturaFormPage: initState');
     _bloc = Modular.get<FacturaBloc>();
     _setupBlocListener();
     _loadData();
   }
 
   void _setupBlocListener() {
+    print('👂 Configurando listener del BLoC');
     _blocSubscription = _bloc.stream.listen((state) {
-      if (!mounted) return;
+      print('🔔 Nuevo estado del BLoC: ${state.runtimeType}');
+      
+      if (!mounted) {
+        print('⚠️ Widget no montado, ignorando estado');
+        return;
+      }
       
       if (state is FacturaLoaded) {
+        print('✅ Factura guardada exitosamente');
         setState(() => _guardando = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Factura guardada exitosamente'),
+            content: Text('✅ Factura guardada exitosamente'),
             backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
           ),
         );
-        Modular.to.navigate('/facturas');
+        
+        // Esperar un momento antes de navegar
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            print('🔙 Navegando a /facturas');
+            Modular.to.navigate('/facturas');
+          }
+        });
       } else if (state is FacturaError) {
+        print('❌ Error del BLoC: ${state.message}');
         setState(() => _guardando = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${state.message}'),
+            content: Text('❌ Error: ${state.message}'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -68,19 +86,26 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
 
   @override
   void dispose() {
+    print('🗑️ FacturaFormPage: dispose');
     _blocSubscription?.cancel();
     super.dispose();
   }
 
   Future<void> _loadData() async {
+    print('📥 Cargando datos iniciales...');
     try {
       _clientes = await _clienteRepo.getAll();
+      print('✅ Clientes cargados: ${_clientes.length}');
+      
       final facturaRepo = Modular.get<FacturaRepository>();
       _numeroFactura = await facturaRepo.getNextNumeroFactura();
+      print('✅ Número de factura: $_numeroFactura');
+      
       if (mounted) {
         setState(() {});
       }
     } catch (e) {
+      print('❌ Error al cargar datos: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -93,17 +118,20 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
   }
 
   Future<void> _cargarServiciosCliente(int clienteId) async {
+    print('🔍 Cargando servicios del cliente $clienteId');
     try {
-      // Obtener todos los vehículos del cliente
       final vehiculos = await _vehiculoRepo.getByClienteId(clienteId);
+      print('   Vehículos encontrados: ${vehiculos.length}');
       
-      // Obtener todos los servicios de esos vehículos que estén completados
       List<Servicio> servicios = [];
       for (var vehiculo in vehiculos) {
         final serviciosVehiculo = await _servicioRepo.getByVehiculoId(vehiculo.id!);
-        // Solo servicios completados
-        servicios.addAll(serviciosVehiculo.where((s) => s.estado == 'completado'));
+        final completados = serviciosVehiculo.where((s) => s.estado == 'completado').toList();
+        print('   Vehículo ${vehiculo.id}: ${completados.length} servicios completados');
+        servicios.addAll(completados);
       }
+      
+      print('✅ Total servicios completados: ${servicios.length}');
       
       if (mounted) {
         setState(() {
@@ -112,6 +140,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
         });
       }
     } catch (e) {
+      print('❌ Error al cargar servicios: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -128,7 +157,9 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
   double get total => subtotal + impuesto - _descuento;
 
   void _agregarItemInventario() async {
+    print('➕ Agregando item del inventario');
     final inventarioItems = await _inventarioRepo.getDisponibles();
+    print('   Items disponibles: ${inventarioItems.length}');
     
     if (inventarioItems.isEmpty) {
       if (mounted) {
@@ -246,6 +277,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
                     return;
                   }
 
+                  print('✅ Item agregado: ${itemSeleccionado!.nombre} x$cantidad');
                   setState(() {
                     _detalles.add(DetalleFactura(
                       facturaId: 0,
@@ -267,13 +299,20 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
   }
 
   void _guardarFactura() async {
-    if (_guardando) return;
+    print('\n🚀 ========== INICIANDO GUARDADO DE FACTURA ==========');
+    
+    if (_guardando) {
+      print('⚠️ Ya se está guardando, ignorando clic');
+      return;
+    }
     
     if (!_formKey.currentState!.validate()) {
+      print('❌ Formulario no válido');
       return;
     }
     
     if (_clienteSeleccionado == null) {
+      print('❌ No hay cliente seleccionado');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Selecciona un cliente')),
       );
@@ -281,6 +320,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
     }
     
     if (_servicioSeleccionado == null) {
+      print('❌ No hay servicio seleccionado');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Selecciona un servicio')),
       );
@@ -288,26 +328,36 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
     }
     
     if (_detalles.isEmpty) {
+      print('❌ No hay items del inventario');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Agrega al menos un item del inventario')),
       );
       return;
     }
 
+    print('✅ Validaciones pasadas');
+    print('   Cliente: ${_clienteSeleccionado!.nombre}');
+    print('   Servicio: ${_servicioSeleccionado!.descripcion}');
+    print('   Items inventario: ${_detalles.length}');
+
     setState(() => _guardando = true);
     
     try {
-      // Verificar disponibilidad de inventario antes de guardar
-      for (var detalle in _detalles) {
+      // 1. Verificar inventario
+      print('\n📦 Verificando inventario...');
+      for (var i = 0; i < _detalles.length; i++) {
+        final detalle = _detalles[i];
         if (detalle.descripcion.contains('Inventario:')) {
           final match = RegExp(r'Inventario:\s*([^)]+)').firstMatch(detalle.descripcion);
           if (match != null) {
             final codigo = match.group(1)?.trim();
+            print('   Verificando item $i: $codigo');
             if (codigo != null) {
               final item = await _inventarioRepo.getByCodigo(codigo);
               if (item == null) {
                 throw Exception('Item no encontrado: $codigo');
               }
+              print('      Disponible: ${item.cantidadDisponible}, Necesario: ${detalle.cantidad}');
               if (item.cantidadDisponible < detalle.cantidad) {
                 throw Exception('Cantidad insuficiente de ${item.nombre}. Disponible: ${item.cantidadDisponible}');
               }
@@ -315,9 +365,13 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
           }
         }
       }
+      print('✅ Inventario verificado');
 
-      // Agregar el servicio como primer detalle
+      // 2. Preparar datos
+      print('\n📝 Preparando datos de factura...');
       final vehiculo = await _vehiculoRepo.getById(_servicioSeleccionado!.vehiculoId);
+      print('   Vehículo: ${vehiculo?.marca} ${vehiculo?.modelo}');
+      
       final detallesConServicio = [
         DetalleFactura(
           facturaId: 0,
@@ -334,7 +388,12 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
       final impuestoTotal = subtotalTotal * (_tasaImpuesto / 100);
       final totalFinal = subtotalTotal + impuestoTotal - _descuento;
 
-      // Crear la factura
+      print('   Subtotal: \$${subtotalTotal.toStringAsFixed(2)}');
+      print('   Impuesto: \$${impuestoTotal.toStringAsFixed(2)}');
+      print('   Descuento: \$${_descuento.toStringAsFixed(2)}');
+      print('   Total: \$${totalFinal.toStringAsFixed(2)}');
+      print('   Detalles totales: ${detallesConServicio.length}');
+
       final factura = Factura(
         clienteId: _clienteSeleccionado!.id!,
         numeroFactura: _numeroFactura,
@@ -346,8 +405,10 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
         estado: 'pendiente',
       );
 
-      // Actualizar inventario ANTES de guardar la factura
-      for (var detalle in _detalles) {
+      // 3. Actualizar inventario ANTES de guardar
+      print('\n📉 Actualizando inventario...');
+      for (var i = 0; i < _detalles.length; i++) {
+        final detalle = _detalles[i];
         if (detalle.descripcion.contains('Inventario:')) {
           final match = RegExp(r'Inventario:\s*([^)]+)').firstMatch(detalle.descripcion);
           if (match != null) {
@@ -355,6 +416,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
             if (codigo != null) {
               final item = await _inventarioRepo.getByCodigo(codigo);
               if (item != null) {
+                print('   Descontando ${detalle.cantidad} de ${item.nombre}');
                 await _inventarioRepo.ajustarCantidad(
                   item.id!,
                   detalle.cantidad,
@@ -362,17 +424,27 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
                   referencia: 'Factura: $_numeroFactura',
                   motivo: 'Venta - Servicio: ${_servicioSeleccionado!.descripcion}',
                 );
+                print('   ✅ Inventario actualizado');
               }
             }
           }
         }
       }
+      print('✅ Todo el inventario actualizado');
 
-      // Guardar usando el BLoC (esto disparará el listener)
+      // 4. Guardar factura con BLoC
+      print('\n💾 Enviando al BLoC...');
       _bloc.add(AddFactura(factura, detallesConServicio));
+      print('✅ Evento AddFactura enviado');
+      print('⏳ Esperando respuesta del BLoC...');
       
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('\n❌ ERROR EN GUARDADO:');
+      print('   Mensaje: $e');
+      print('   Stack trace: $stackTrace');
+      
       setState(() => _guardando = false);
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -383,6 +455,8 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
         );
       }
     }
+    
+    print('========== FIN GUARDADO DE FACTURA ==========\n');
   }
 
   @override
@@ -391,7 +465,10 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Modular.to.navigate('/facturas'),
+          onPressed: () {
+            print('🔙 Volviendo a /facturas');
+            Modular.to.navigate('/facturas');
+          },
         ),
         title: const Text('Nueva Factura'),
         backgroundColor: Colors.purple.shade700,
@@ -442,6 +519,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
                         );
                       }).toList(),
                       onChanged: (value) {
+                        print('Cliente seleccionado: ${value?.nombre}');
                         setState(() {
                           _clienteSeleccionado = value;
                           _servicioSeleccionado = null;
@@ -462,7 +540,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.build),
                         ),
-                        value: _servicioSeleccionado,
+                        initialValue: _servicioSeleccionado,
                         items: _serviciosCliente.map((servicio) {
                           return DropdownMenuItem(
                             value: servicio,
@@ -479,6 +557,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
                           );
                         }).toList(),
                         onChanged: (value) {
+                          print('Servicio seleccionado: ${value?.descripcion}');
                           setState(() => _servicioSeleccionado = value);
                         },
                         validator: (value) =>
@@ -567,6 +646,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
                                   IconButton(
                                     icon: const Icon(Icons.delete, color: Colors.red),
                                     onPressed: () {
+                                      print('🗑️ Eliminando item $index');
                                       setState(() => _detalles.removeAt(index));
                                     },
                                   ),
@@ -690,13 +770,23 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
                     ),
                   ),
                   child: _guardando
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Guardando...',
+                              style: const TextStyle(fontSize: 18, color: Colors.white),
+                            ),
+                          ],
                         )
                       : const Text(
                           'Guardar Factura',

@@ -323,40 +323,51 @@ class InventarioRepository {
     return await db.delete('inventario', where: 'id = ?', whereArgs: [id]);
   }
 
+  
   Future<void> ajustarCantidad(int id, int cantidad, String tipo, {String? referencia, String? motivo}) async {
     final db = await _db.database;
+    
+    // IMPORTANTE: Obtener el item ANTES de la transacción
+    final result = await db.query('inventario', where: 'id = ?', whereArgs: [id]);
+    
+    if (result.isEmpty) {
+      throw Exception('Item de inventario no encontrado');
+    }
+    
+    final item = Inventario.fromMap(result.first);
+    
     await db.transaction((txn) async {
-      // Actualizar cantidad en inventario
-      final item = await getById(id);
-      if (item != null) {
-        int nuevaCantidad = item.cantidadDisponible;
-        if (tipo == 'entrada') {
-          nuevaCantidad += cantidad;
-        } else if (tipo == 'salida') {
-          nuevaCantidad -= cantidad;
-          if (nuevaCantidad < 0) {
-            throw Exception('Cantidad insuficiente en inventario');
-          }
+      // Calcular nueva cantidad
+      int nuevaCantidad = item.cantidadDisponible;
+      if (tipo == 'entrada') {
+        nuevaCantidad += cantidad;
+      } else if (tipo == 'salida') {
+        nuevaCantidad -= cantidad;
+        if (nuevaCantidad < 0) {
+          throw Exception('Cantidad insuficiente en inventario');
         }
-
-        await txn.update(
-          'inventario',
-          {'cantidad_disponible': nuevaCantidad},
-          where: 'id = ?',
-          whereArgs: [id],
-        );
-
-        // Registrar movimiento
-        await txn.insert('movimientos_inventario', {
-          'inventario_id': id,
-          'tipo': tipo,
-          'cantidad': cantidad,
-          'referencia': referencia,
-          'motivo': motivo,
-          'fecha': DateTime.now().toIso8601String(),
-        });
       }
+
+      // Actualizar cantidad en inventario usando la transacción
+      await txn.update(
+        'inventario',
+        {'cantidad_disponible': nuevaCantidad},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      // Registrar movimiento usando la transacción
+      await txn.insert('movimientos_inventario', {
+        'inventario_id': id,
+        'tipo': tipo,
+        'cantidad': cantidad,
+        'referencia': referencia,
+        'motivo': motivo,
+        'fecha': DateTime.now().toIso8601String(),
+      });
     });
+    
+    print('   ✅ Inventario actualizado correctamente');
   }
 
   Future<List<Map<String, dynamic>>> buscar(String query) async {
