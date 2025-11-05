@@ -6,6 +6,7 @@ import 'factura_bloc.dart';
 import 'vehiculo_bloc.dart';
 import 'empleado_bloc.dart';
 import 'servicio_bloc.dart';
+import 'servicio_predefinido_bloc.dart';
 import 'pages/home_page.dart';
 import 'pages/clientes_page.dart';
 import 'pages/cliente_form_page.dart';
@@ -17,6 +18,7 @@ import 'pages/reportes_page.dart';
 import 'pages/empleados_page.dart';
 import 'pages/servicios_page.dart';
 import 'pages/inventario_page.dart';
+import 'pages/servicios_predefinidos_page.dart';
 
 class AppModule extends Module {
   @override
@@ -30,9 +32,12 @@ class AppModule extends Module {
     i.addSingleton(DetalleFacturaRepository.new);
     i.addSingleton(EmpleadoRepository.new);
     
-    // NUEVOS REPOSITORIOS DE INVENTARIO
+    // REPOSITORIOS DE INVENTARIO
     i.addSingleton(InventarioRepository.new);
     i.addSingleton(MovimientoInventarioRepository.new);
+    
+    // REPOSITORIO DE SERVICIOS PREDEFINIDOS
+    i.addSingleton(ServicioPredefinidoRepository.new);
     
     // BLoCs
     i.addLazySingleton(() => ClienteBloc(i.get<ClienteRepository>()));
@@ -46,6 +51,7 @@ class AppModule extends Module {
       clienteRepo: i.get<ClienteRepository>(),
       empleadoRepo: i.get<EmpleadoRepository>(),
     ));
+    i.addLazySingleton(() => ServicioPredefinidoBloc(i.get<ServicioPredefinidoRepository>()));
   }
 
   @override
@@ -65,8 +71,7 @@ class AppModule extends Module {
     r.child('/reportes', child: (context) => const ReportesPage());
     r.child('/empleados', child: (context) => const EmpleadosPage());
     r.child('/servicios', child: (context) => const ServiciosPage());
-    
-    // NUEVA RUTA DE INVENTARIO
     r.child('/inventario', child: (context) => const InventarioPage());
+    r.child('/servicios-predefinidos', child: (context) => const ServiciosPredefinidosPage());
   }
 }

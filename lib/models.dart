@@ -340,7 +340,83 @@ class DetalleFactura extends Equatable {
 }
 
 
-// ========== NUEVOS MODELOS PARA INVENTARIO ==========
+// ========== MODELO PARA SERVICIOS PREDEFINIDOS ==========
+
+class ServicioPredefinido extends Equatable {
+  final int? id;
+  final String codigo;
+  final String nombre;
+  final String? descripcion;
+  final double precio;
+  final String? categoria;
+  final bool activo;
+  final DateTime createdAt;
+
+  const ServicioPredefinido({
+    this.id,
+    required this.codigo,
+    required this.nombre,
+    this.descripcion,
+    required this.precio,
+    this.categoria,
+    this.activo = true,
+    required this.createdAt,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'codigo': codigo,
+      'nombre': nombre,
+      'descripcion': descripcion,
+      'precio': precio,
+      'categoria': categoria,
+      'activo': activo ? 1 : 0,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
+
+  factory ServicioPredefinido.fromMap(Map<String, dynamic> map) {
+    return ServicioPredefinido(
+      id: map['id'] as int?,
+      codigo: map['codigo'] as String,
+      nombre: map['nombre'] as String,
+      descripcion: map['descripcion'] as String?,
+      precio: map['precio'] as double,
+      categoria: map['categoria'] as String?,
+      activo: (map['activo'] as int) == 1,
+      createdAt: DateTime.parse(map['created_at'] as String),
+    );
+  }
+
+  ServicioPredefinido copyWith({
+    int? id,
+    String? codigo,
+    String? nombre,
+    String? descripcion,
+    double? precio,
+    String? categoria,
+    bool? activo,
+    DateTime? createdAt,
+  }) {
+    return ServicioPredefinido(
+      id: id ?? this.id,
+      codigo: codigo ?? this.codigo,
+      nombre: nombre ?? this.nombre,
+      descripcion: descripcion ?? this.descripcion,
+      precio: precio ?? this.precio,
+      categoria: categoria ?? this.categoria,
+      activo: activo ?? this.activo,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, codigo, nombre, descripcion, precio, categoria, activo, createdAt];
+}
+
+
+// ========== MODELOS PARA INVENTARIO ==========
 
 class Inventario extends Equatable {
   final int? id;

@@ -36,7 +36,7 @@ class HomePage extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.blue.shade700.withOpacity(0.1),
+              Colors.blue.shade700.withValues(alpha: 0.1),
               Colors.white,
             ],
           ),
@@ -114,15 +114,25 @@ class HomePage extends StatelessWidget {
                       onTap: () => Modular.to.navigate('/reportes'),
                     ),
                     _buildMenuCard(
-                       context,
-                       title: 'Inventario',
-                       icon: Icons.inventory_2,
-                       color: Colors.teal,
-                       iconSize: iconSize,
-                       fontSize: fontSize,
-                       cardPadding: cardPadding,
-                       onTap: () => Modular.to.navigate('/inventario'),
-)                     ,
+                      context,
+                      title: 'Inventario',
+                      icon: Icons.inventory_2,
+                      color: Colors.teal,
+                      iconSize: iconSize,
+                      fontSize: fontSize,
+                      cardPadding: cardPadding,
+                      onTap: () => Modular.to.navigate('/inventario'),
+                    ),
+                    _buildMenuCard(
+                      context,
+                      title: 'Servicios Predefinidos',
+                      icon: Icons.settings_applications,
+                      color: Colors.deepPurple,
+                      iconSize: iconSize,
+                      fontSize: fontSize,
+                      cardPadding: cardPadding,
+                      onTap: () => Modular.to.navigate('/servicios-predefinidos'),
+                    ),
                   ],
                 ),
               );
@@ -148,12 +158,12 @@ class HomePage extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      shadowColor: color.withOpacity(0.4),
+      shadowColor: color.withValues(alpha: 0.4),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        splashColor: color.withOpacity(0.3),
-        highlightColor: color.withOpacity(0.1),
+        splashColor: color.withValues(alpha: 0.3),
+        highlightColor: color.withValues(alpha: 0.1),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
@@ -162,7 +172,7 @@ class HomePage extends StatelessWidget {
               end: Alignment.bottomRight,
               colors: [
                 Colors.white,
-                color.withOpacity(0.05),
+                color.withValues(alpha: 0.05),
               ],
             ),
           ),
@@ -174,7 +184,7 @@ class HomePage extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.all(cardPadding),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(

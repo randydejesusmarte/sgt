@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'app_module.dart';
+import 'migration_helper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,6 +14,14 @@ void main() async {
       defaultTargetPlatform == TargetPlatform.macOS)) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
+  }
+  
+  // EJECUTAR MIGRACIÓN PARA SERVICIOS PREDEFINIDOS
+  try {
+    await MigrationHelper.ejecutarMigracionV3();
+    print('✅ Migración completada exitosamente');
+  } catch (e) {
+    print('❌ Error en migración: $e');
   }
   
   runApp(ModularApp(module: AppModule(), child: const MyApp()));

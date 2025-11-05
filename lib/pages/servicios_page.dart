@@ -676,6 +676,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
   void _showAddServicioDialog() async {
     final clientes = await Modular.get<ClienteRepository>().getAll();
     if (clientes.isEmpty) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Row(
@@ -698,9 +699,13 @@ class _ServiciosPageState extends State<ServiciosPage> {
       return;
     }
 
+    // Cargar servicios predefinidos
+    final serviciosPredefinidos = await Modular.get<ServicioPredefinidoRepository>().getActivos();
+
     Cliente? clienteSeleccionado;
     Vehiculo? vehiculoSeleccionado;
     Empleado? empleadoSeleccionado;
+    ServicioPredefinido? servicioPredefinidoSeleccionado;
     List<Vehiculo> vehiculos = [];
     final empleados = await Modular.get<EmpleadoRepository>().getActivos();
 
@@ -709,6 +714,9 @@ class _ServiciosPageState extends State<ServiciosPage> {
     final notasController = TextEditingController();
     final formKey = GlobalKey<FormState>();
     String estadoSeleccionado = 'pendiente';
+    bool usarServicioPredefinido = serviciosPredefinidos.isNotEmpty;
+
+    if (!mounted) return;
 
     showDialog(
       context: context,
@@ -737,7 +745,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
                 ),
               ),
               const SizedBox(width: 12),
-              const Text('Nuevo Servicio'),
+              const Expanded(child: Text('Nuevo Servicio')),
             ],
           ),
           content: Form(
@@ -786,6 +794,110 @@ class _ServiciosPageState extends State<ServiciosPage> {
                     validator: (v) => v == null ? 'Selecciona un vehículo' : null,
                   ),
                   const SizedBox(height: 16),
+                  
+                  // Switch para elegir entre servicio predefinido o personalizado
+                  if (serviciosPredefinidos.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.indigo.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.indigo.withValues(alpha: 0.2)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.settings_applications, size: 20, color: Colors.indigo),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'Usar servicio predefinido',
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                          Switch(
+                            value: usarServicioPredefinido,
+                            onChanged: (value) {
+                              setDialogState(() {
+                                usarServicioPredefinido = value;
+                                if (!value) {
+                                  servicioPredefinidoSeleccionado = null;
+                                  descripcionController.clear();
+                                  costoController.clear();
+                                }
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  
+                  if (serviciosPredefinidos.isNotEmpty)
+                    const SizedBox(height: 16),
+                  
+                  // Mostrar dropdown de servicios predefinidos o campos manuales
+                  if (usarServicioPredefinido && serviciosPredefinidos.isNotEmpty) ...[
+                    _buildDropdownField<ServicioPredefinido?>(
+                      value: servicioPredefinidoSeleccionado,
+                      label: 'Servicio Predefinido *',
+                      icon: Icons.build_circle,
+                      items: serviciosPredefinidos.map((servicio) {
+                        return DropdownMenuItem(
+                          value: servicio,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(servicio.nombre),
+                              Text(
+                                '\$${servicio.precio.toStringAsFixed(2)}${servicio.categoria != null ? ' - ${servicio.categoria}' : ''}',
+                                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          servicioPredefinidoSeleccionado = value;
+                          if (value != null) {
+                            descripcionController.text = value.descripcion ?? value.nombre;
+                            costoController.text = value.precio.toStringAsFixed(2);
+                          }
+                        });
+                      },
+                      validator: (v) => v == null ? 'Selecciona un servicio' : null,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  
+                  // Descripción editable
+                  if (!usarServicioPredefinido || servicioPredefinidoSeleccionado != null || serviciosPredefinidos.isEmpty) ...[
+                    _buildTextField(
+                      controller: descripcionController,
+                      label: usarServicioPredefinido && servicioPredefinidoSeleccionado != null
+                          ? 'Descripción (puedes editarla)'
+                          : 'Descripción del servicio *',
+                      icon: Icons.description,
+                      maxLines: 2,
+                      validator: (v) => v?.isEmpty ?? true ? 'Requerido' : null,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  
+                  // Costo editable
+                  if (!usarServicioPredefinido || servicioPredefinidoSeleccionado != null || serviciosPredefinidos.isEmpty) ...[
+                    _buildTextField(
+                      controller: costoController,
+                      label: usarServicioPredefinido && servicioPredefinidoSeleccionado != null
+                          ? 'Costo (ajustable)'
+                          : 'Costo estimado *',
+                      icon: Icons.attach_money,
+                      keyboardType: TextInputType.number,
+                      validator: (v) => v?.isEmpty ?? true ? 'Requerido' : null,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  
                   _buildDropdownField<Empleado?>(
                     value: empleadoSeleccionado,
                     label: 'Mecánico Asignado',
@@ -805,22 +917,6 @@ class _ServiciosPageState extends State<ServiciosPage> {
                     onChanged: (value) {
                       setDialogState(() => empleadoSeleccionado = value);
                     },
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: descripcionController,
-                    label: 'Descripción del servicio',
-                    icon: Icons.description,
-                    maxLines: 2,
-                    validator: (v) => v?.isEmpty ?? true ? 'Requerido' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: costoController,
-                    label: 'Costo estimado',
-                    icon: Icons.attach_money,
-                    keyboardType: TextInputType.number,
-                    validator: (v) => v?.isEmpty ?? true ? 'Requerido' : null,
                   ),
                   const SizedBox(height: 16),
                   _buildDropdownField<String>(

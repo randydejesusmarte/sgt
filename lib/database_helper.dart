@@ -12,18 +12,17 @@ class DatabaseHelper {
     _database = await _initDB('taller.db');
     return _database!;
   }
-
   Future<Database> _initDB(String filePath) async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
-
-    return await openDatabase(
-      path,
-      version: 2, // INCREMENTAR VERSIÓN PARA MIGRACIÓN
-      onCreate: _createDB,
-      onUpgrade: _onUpgrade, // AGREGAR MIGRACIÓN
-    );
-  }
+      final dbPath = await getDatabasesPath();
+      final path = join(dbPath, filePath);
+  
+      return await openDatabase(
+        path,
+        version: 3, // INCREMENTAR VERSIÓN PARA NUEVA TABLA
+        onCreate: _createDB,
+        onUpgrade: _onUpgrade, // AGREGAR MIGRACIÓN
+      );
+    }
 
   Future _createDB(Database db, int version) async {
     const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
@@ -194,4 +193,6 @@ CREATE TABLE movimientos_inventario (
     final db = await instance.database;
     db.close();
   }
+
+  
 }

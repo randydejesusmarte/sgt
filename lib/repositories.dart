@@ -429,3 +429,83 @@ class MovimientoInventarioRepository {
     return result.map((map) => MovimientoInventario.fromMap(map)).toList();
   }
 }
+
+// ========== REPOSITORIO DE SERVICIOS PREDEFINIDOS ==========
+
+class ServicioPredefinidoRepository {
+  final DatabaseHelper _db = DatabaseHelper.instance;
+
+  Future<int> create(ServicioPredefinido servicio) async {
+    final db = await _db.database;
+    return await db.insert('servicios_predefinidos', servicio.toMap());
+  }
+
+  Future<List<ServicioPredefinido>> getAll() async {
+    final db = await _db.database;
+    final result = await db.query('servicios_predefinidos', orderBy: 'nombre ASC');
+    return result.map((map) => ServicioPredefinido.fromMap(map)).toList();
+  }
+
+  Future<List<ServicioPredefinido>> getActivos() async {
+    final db = await _db.database;
+    final result = await db.query(
+      'servicios_predefinidos',
+      where: 'activo = ?',
+      whereArgs: [1],
+      orderBy: 'nombre ASC',
+    );
+    return result.map((map) => ServicioPredefinido.fromMap(map)).toList();
+  }
+
+  Future<List<ServicioPredefinido>> getByCategoria(String categoria) async {
+    final db = await _db.database;
+    final result = await db.query(
+      'servicios_predefinidos',
+      where: 'categoria = ? AND activo = ?',
+      whereArgs: [categoria, 1],
+      orderBy: 'nombre ASC',
+    );
+    return result.map((map) => ServicioPredefinido.fromMap(map)).toList();
+  }
+
+  Future<ServicioPredefinido?> getById(int id) async {
+    final db = await _db.database;
+    final result = await db.query('servicios_predefinidos', where: 'id = ?', whereArgs: [id]);
+    if (result.isEmpty) return null;
+    return ServicioPredefinido.fromMap(result.first);
+  }
+
+  Future<ServicioPredefinido?> getByCodigo(String codigo) async {
+    final db = await _db.database;
+    final result = await db.query('servicios_predefinidos', where: 'codigo = ?', whereArgs: [codigo]);
+    if (result.isEmpty) return null;
+    return ServicioPredefinido.fromMap(result.first);
+  }
+
+  Future<int> update(ServicioPredefinido servicio) async {
+    final db = await _db.database;
+    return await db.update('servicios_predefinidos', servicio.toMap(), where: 'id = ?', whereArgs: [servicio.id]);
+  }
+
+  Future<int> delete(int id) async {
+    final db = await _db.database;
+    return await db.delete('servicios_predefinidos', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<List<String>> getCategorias() async {
+    final db = await _db.database;
+    final result = await db.rawQuery('SELECT DISTINCT categoria FROM servicios_predefinidos WHERE categoria IS NOT NULL ORDER BY categoria');
+    return result.map((row) => row['categoria'] as String).toList();
+  }
+
+  Future<List<ServicioPredefinido>> buscar(String query) async {
+    final db = await _db.database;
+    final result = await db.query(
+      'servicios_predefinidos',
+      where: 'nombre LIKE ? OR codigo LIKE ? OR descripcion LIKE ?',
+      whereArgs: ['%$query%', '%$query%', '%$query%'],
+      orderBy: 'nombre ASC',
+    );
+    return result.map((map) => ServicioPredefinido.fromMap(map)).toList();
+  }
+}

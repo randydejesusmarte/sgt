@@ -210,7 +210,7 @@ class FacturaPdf {
                   borderRadius: pw.BorderRadius.circular(5),
                 ),
                 child: pw.Text(
-                  '\${servicio.costo.toStringAsFixed(2)}',
+                  '${servicio.costo.toStringAsFixed(2)}',
                   style: pw.TextStyle(
                     fontSize: 14,
                     fontWeight: pw.FontWeight.bold,
@@ -251,8 +251,8 @@ class FacturaPdf {
             children: [
               _buildTableCell(detalle.descripcion),
               _buildTableCell(detalle.cantidad.toString(), align: pw.TextAlign.center),
-              _buildTableCell('\${detalle.precioUnitario.toStringAsFixed(2)}', align: pw.TextAlign.right),
-              _buildTableCell('\${detalle.total.toStringAsFixed(2)}', align: pw.TextAlign.right),
+              _buildTableCell('${detalle.precioUnitario.toStringAsFixed(2)}', align: pw.TextAlign.right),
+              _buildTableCell('${detalle.total.toStringAsFixed(2)}', align: pw.TextAlign.right),
             ],
           );
         }),
@@ -292,12 +292,12 @@ class FacturaPdf {
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.stretch,
             children: [
-              _buildTotalRow('Subtotal:', '\${factura.subtotal.toStringAsFixed(2)}'),
+              _buildTotalRow('Subtotal:', '${factura.subtotal.toStringAsFixed(2)}'),
               pw.SizedBox(height: 5),
-              _buildTotalRow('ITBIS (18%):', '\${factura.impuesto.toStringAsFixed(2)}'),
+              _buildTotalRow('ITBIS (18%):', '${factura.impuesto.toStringAsFixed(2)}'),
               if (factura.descuento > 0) ...[
                 pw.SizedBox(height: 5),
-                _buildTotalRow('Descuento:', '-\${factura.descuento.toStringAsFixed(2)}'),
+                _buildTotalRow('Descuento:', '-${factura.descuento.toStringAsFixed(2)}'),
               ],
               pw.Divider(thickness: 2),
               pw.SizedBox(height: 5),
@@ -318,7 +318,7 @@ class FacturaPdf {
                       borderRadius: pw.BorderRadius.circular(5),
                     ),
                     child: pw.Text(
-                      '\${factura.total.toStringAsFixed(2)}',
+                      '${factura.total.toStringAsFixed(2)}',
                       style: pw.TextStyle(
                         fontSize: 16,
                         fontWeight: pw.FontWeight.bold,
