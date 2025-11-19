@@ -3,6 +3,7 @@ import 'package:flutter_modular/flutter_modular.dart';
 import '../models.dart';
 import '../cliente_bloc.dart';
 import '../repositories.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 
 class ClienteFormPage extends StatefulWidget {
   final int? clienteId;
@@ -17,6 +18,11 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
   final _formKey = GlobalKey<FormState>();
   final _nombreController = TextEditingController();
   final _telefonoController = TextEditingController();
+  final _phoneMaskFormatter = MaskTextInputFormatter(
+    mask: '(###) ###-####',
+    filter: { "#": RegExp(r'[0-9]') },
+    type: MaskAutoCompletionType.lazy,
+  );
   final _emailController = TextEditingController();
   final _direccionController = TextEditingController();
   
@@ -359,6 +365,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
   }) {
     return TextFormField(
       controller: controller,
+      inputFormatters: label == 'Teléfono' ? [_phoneMaskFormatter] : [],
       decoration: InputDecoration(
         labelText: required ? '$label *' : label,
         labelStyle: TextStyle(

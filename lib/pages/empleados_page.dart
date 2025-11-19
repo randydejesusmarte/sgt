@@ -31,6 +31,7 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
         ),
         title: const Text('Empleados'),
         backgroundColor: Colors.teal.shade700,
+        foregroundColor: Colors.white,
       ),
       body: BlocBuilder<EmpleadoBloc, EmpleadoState>(
         bloc: _empleadoBloc,

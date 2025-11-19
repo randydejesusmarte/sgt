@@ -43,6 +43,7 @@ class _InventarioPageState extends State<InventarioPage> {
         ),
         title: const Text('Inventario'),
         backgroundColor: Colors.teal.shade700,
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

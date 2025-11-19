@@ -31,6 +31,7 @@ class _ComprasPageState extends State<ComprasPage> {
         ),
         title: const Text('Historial de Compras'),
         backgroundColor: Colors.green.shade700,
+        foregroundColor: Colors.white,
       ),
       body: BlocBuilder<CompraBloc, CompraState>(
         bloc: _bloc,

@@ -101,6 +101,7 @@ class _FacturasPageState extends State<FacturasPage> {
         ),
         title: const Text('Facturas'),
         backgroundColor: Colors.purple.shade700,
+        foregroundColor: Colors.white,
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.filter_list),
@@ -346,41 +347,41 @@ class _FacturasPageState extends State<FacturasPage> {
                 Navigator.pop(context);
               },
             ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Eliminar', style: TextStyle(color: Colors.red)),
-              onTap: () {
-                Navigator.pop(context);
-                _showDeleteDialog(context, factura.id!);
-              },
-            ),
+            //const Divider(),
+            //ListTile(
+            //  leading: const Icon(Icons.delete, color: Colors.red),
+            //  title: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+            //  onTap: () {
+            //    Navigator.pop(context);
+            //    _showDeleteDialog(context, factura.id!);
+            //  },
+            //),
           ],
         ),
       ),
     );
   }
 
-  void _showDeleteDialog(BuildContext context, int id) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar eliminación'),
-        content: const Text('¿Estás seguro de eliminar esta factura?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              _bloc.add(DeleteFactura(id));
-              Navigator.pop(context);
-            },
-            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
+  //void _showDeleteDialog(BuildContext context, int id) {
+  //  showDialog(
+  //    context: context,
+  //    builder: (context) => AlertDialog(
+  //      title: const Text('Confirmar eliminación'),
+  //      content: const Text('¿Estás seguro de eliminar esta factura?'),
+  //      actions: [
+  //        TextButton(
+  //          onPressed: () => Navigator.pop(context),
+  //          child: const Text('Cancelar'),
+  //        ),
+  //        TextButton(
+  //          onPressed: () {
+  //            _bloc.add(DeleteFactura(id));
+  //            Navigator.pop(context);
+  //          },
+  //          child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+  //        ),
+  //      ],
+  //    ),
+  //  );
+  //}
 }

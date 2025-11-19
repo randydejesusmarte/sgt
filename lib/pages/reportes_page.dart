@@ -53,6 +53,7 @@ class _ReportesPageState extends State<ReportesPage> {
         appBar: AppBar(
           title: const Text('Reportes'),
           backgroundColor: Colors.orange.shade700,
+          foregroundColor: Colors.white,
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -66,6 +67,7 @@ class _ReportesPageState extends State<ReportesPage> {
         ),
         title: const Text('Reportes y Estadísticas'),
         backgroundColor: Colors.orange.shade700,
+        foregroundColor: Colors.white,
       ),
       body: RefreshIndicator(
         onRefresh: () async {

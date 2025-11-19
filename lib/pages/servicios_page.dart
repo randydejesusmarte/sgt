@@ -542,14 +542,14 @@ class _ServiciosPageState extends State<ServiciosPage> {
                 _showEstadoDialog(servicio);
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Eliminar Servicio'),
-              onTap: () {
-                Navigator.pop(context);
-                _showDeleteDialog(servicio.id!);
-              },
-            ),
+            //ListTile(
+            //  leading: const Icon(Icons.delete, color: Colors.red),
+            //  title: const Text('Eliminar Servicio'),
+            //  onTap: () {
+            //    Navigator.pop(context);
+            //    _showDeleteDialog(servicio.id!);
+            //  },
+            //),
           ],
         ),
       ),
@@ -581,10 +581,15 @@ class _ServiciosPageState extends State<ServiciosPage> {
   }
 
   Widget _buildEstadoRadio(String label, String value, Servicio servicio) {
+    // La clave para la selección sigue siendo la comparación
+    // que se hace internamente por el RadioListTile (aunque groupValue esté deprecado)
+    // y la reconstrucción del widget con el nuevo 'estado'.
+
     return RadioListTile<String>(
       title: Text(label),
       value: value,
-      groupValue: servicio.estado,
+      // **Se elimina groupValue para seguir la recomendación de usar un ancestro**
+      selected: servicio.estado == value, // Usamos 'selected' para destacar el título/subtítulo
       onChanged: (newValue) {
         if (newValue != null) {
           final updated = Servicio(
@@ -594,11 +599,13 @@ class _ServiciosPageState extends State<ServiciosPage> {
             descripcion: servicio.descripcion,
             costo: servicio.costo,
             fecha: servicio.fecha,
-            estado: newValue,
+            estado: newValue, // Este es el valor clave que actualiza el estado
             notas: servicio.notas,
           );
           _servicioBloc.add(UpdateServicio(updated));
-          Navigator.pop(context);
+          // Ya que el Bloc se actualiza, la vista se reconstruirá,
+          // mostrando el nuevo estado seleccionado.
+          Navigator.pop(context); 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Estado actualizado a: $label'),
@@ -607,10 +614,13 @@ class _ServiciosPageState extends State<ServiciosPage> {
           );
         }
       },
+      // Puedes añadir el control visual Radio.value aquí si fuera un Radio estándar,
+      // pero RadioListTile lo maneja internamente.
+      // El valor por el cual se selecciona *aún* es el estado del servicio.
     );
   }
 
-  void _showDeleteDialog(int id) {
+  /*void _showDeleteDialog(int id) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -641,7 +651,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
         ],
       ),
     );
-  }
+  }*/
 
   Color _getEstadoColor(String estado) {
     switch (estado) {

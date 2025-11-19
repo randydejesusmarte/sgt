@@ -34,6 +34,7 @@ class _ServiciosPredefinidosPageState extends State<ServiciosPredefinidosPage> {
         ),
         title: const Text('Servicios Predefinidos'),
         backgroundColor: Colors.deepPurple.shade700,
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

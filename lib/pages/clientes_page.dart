@@ -33,6 +33,7 @@ class _ClientesPageState extends State<ClientesPage> {
         ),
         title: const Text('Clientes'),
         backgroundColor: Colors.blue.shade700,
+        foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
       ),

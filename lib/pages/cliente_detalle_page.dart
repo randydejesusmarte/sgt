@@ -56,6 +56,7 @@ class _ClienteDetallePageState extends State<ClienteDetallePage> {
         ),
           title: Text(_cliente!.nombre),
           backgroundColor: Colors.blue.shade700,
+          foregroundColor: Colors.white,
           bottom: const TabBar(
             tabs: [
               Tab(icon: Icon(Icons.directions_car), text: 'Vehículos'),

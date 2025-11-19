@@ -239,8 +239,8 @@ class FacturaRepository {
 
   Future<String> getNextNumeroFactura() async {
     final db = await _db.database;
-    final result = await db.rawQuery('SELECT MAX(CAST(SUBSTR(numero_factura, 5) AS INTEGER)) as max_num FROM facturas WHERE numero_factura LIKE "FAC-%"');
-    final maxNum = result.first['max_num'] as int? ?? 0;
+    final result = await db.rawQuery("SELECT MAX(CAST(SUBSTR(numero_factura, 5) AS INTEGER)) as max_num FROM facturas WHERE numero_factura LIKE 'FAC-%'");
+    final maxNum = result.isNotEmpty ? (result.first['max_num'] as int? ?? 0) : 0;
     return 'FAC-${(maxNum + 1).toString().padLeft(6, '0')}';
   }
 }
