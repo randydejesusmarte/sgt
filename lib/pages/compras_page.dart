@@ -23,6 +23,9 @@ class _ComprasPageState extends State<ComprasPage> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -32,121 +35,336 @@ class _ComprasPageState extends State<ComprasPage> {
         title: const Text('Historial de Compras'),
         backgroundColor: Colors.green.shade700,
         foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
       ),
-      body: BlocBuilder<CompraBloc, CompraState>(
-        bloc: _bloc,
-        builder: (context, state) {
-          if (state is CompraLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (state is CompraError) {
-            return Center(child: Text('Error: ${state.message}'));
-          }
-
-          if (state is CompraLoaded) {
-            if (state.compras.isEmpty) {
-              return const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.shopping_cart_outlined, size: 80, color: Colors.grey),
-                    SizedBox(height: 16),
-                    Text('No hay compras registradas'),
-                  ],
-                ),
-              );
-            }
-
-            final totalCompras = state.compras.fold<double>(
-              0,
-              (sum, compra) => sum + compra.total,
-            );
-
-            return Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  color: Colors.green.shade50,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.green.shade700.withValues(alpha: 0.1),
+              Colors.white,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: BlocBuilder<CompraBloc, CompraState>(
+            bloc: _bloc,
+            builder: (context, state) {
+              if (state is CompraLoading) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
-                        'Total en compras:',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      CircularProgressIndicator(
+                        color: Colors.green.shade700,
                       ),
+                      const SizedBox(height: 16),
                       Text(
-                        '\$${totalCompras.toStringAsFixed(2)}',
+                        'Cargando compras...',
                         style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green.shade700,
+                          color: Colors.grey.shade600,
+                          fontSize: 16,
                         ),
                       ),
                     ],
                   ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: state.compras.length,
-                    padding: const EdgeInsets.all(8),
-                    itemBuilder: (context, index) {
-                      final compra = state.compras[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.green.shade700,
-                            child: const Icon(Icons.shopping_bag, color: Colors.white),
+                );
+              }
+
+              if (state is CompraError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Colors.red.shade400,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Error: ${state.message}',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey.shade600,
                           ),
-                          title: Text(
-                            compra.item,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              if (state is CompraLoaded) {
+                if (state.compras.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.shopping_cart_outlined,
+                            size: 80,
+                            color: Colors.grey.shade400,
                           ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Cantidad: ${compra.cantidad}'),
-                              Text('Precio unitario: \$${compra.precioUnitario.toStringAsFixed(2)}'),
-                              Text(
-                                DateFormat('dd/MM/yyyy HH:mm').format(compra.fecha),
-                                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No hay compras registradas',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                final totalCompras = state.compras.fold<double>(
+                  0,
+                  (sum, compra) => sum + compra.total,
+                );
+
+                return Column(
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.green.shade700,
+                            Colors.green.shade900,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.green.withValues(alpha: 0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Total en compras',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            '\$${totalCompras.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: state.compras.length,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.03,
+                          vertical: 8,
+                        ),
+                        physics: const BouncingScrollPhysics(),
+                        itemBuilder: (context, index) {
+                          final compra = state.compras[index];
+                          return _buildCompraCard(context, compra, isMobile);
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              return const Center(child: Text('Estado desconocido'));
+            },
+          ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showAddCompraDialog(context),
+        backgroundColor: Colors.green.shade700,
+        icon: const Icon(Icons.add),
+        label: isMobile ? const SizedBox.shrink() : const Text('Nueva Compra'),
+      ),
+    );
+  }
+
+  Widget _buildCompraCard(
+    BuildContext context,
+    Compra compra,
+    bool isMobile,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        shadowColor: Colors.green.withValues(alpha: 0.2),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          splashColor: Colors.green.withValues(alpha: 0.1),
+          highlightColor: Colors.green.withValues(alpha: 0.05),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white,
+                  Colors.green.withValues(alpha: 0.02),
+                ],
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Container(
+                    width: isMobile ? 50 : 60,
+                    height: isMobile ? 50 : 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.green.shade700,
+                          Colors.green.shade900,
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.green.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.shopping_bag,
+                        color: Colors.white,
+                        size: isMobile ? 24 : 28,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          compra.item,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: isMobile ? 16 : 18,
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_today,
+                              size: 14,
+                              color: Colors.grey.shade600,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              DateFormat('dd/MM/yyyy HH:mm')
+                                  .format(compra.fecha),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade600,
                               ),
-                            ],
-                          ),
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                '\$${compra.total.toStringAsFixed(2)}',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'Cant: ${compra.cantidad}',
                                 style: TextStyle(
-                                  fontSize: 18,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.green.shade700,
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '\$${compra.precioUnitario.toStringAsFixed(2)} c/u',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
                         ),
-                      );
-                    },
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            );
-          }
-
-          return const Center(child: Text('Estado desconocido'));
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddCompraDialog(context),
-        backgroundColor: Colors.green.shade700,
-        child: const Icon(Icons.add),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '\$${compra.total.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: isMobile ? 18 : 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Total',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -160,7 +378,32 @@ class _ComprasPageState extends State<ComprasPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Agregar Compra'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.green.shade700,
+                    Colors.green.shade900,
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.add_shopping_cart,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text('Agregar Compra'),
+          ],
+        ),
         content: Form(
           key: formKey,
           child: SingleChildScrollView(
@@ -169,29 +412,38 @@ class _ComprasPageState extends State<ComprasPage> {
               children: [
                 TextFormField(
                   controller: itemController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Item',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    prefixIcon: const Icon(Icons.shopping_bag),
                   ),
                   validator: (v) => v?.isEmpty ?? true ? 'Requerido' : null,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: cantidadController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Cantidad',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    prefixIcon: const Icon(Icons.numbers),
                   ),
                   keyboardType: TextInputType.number,
                   validator: (v) => v?.isEmpty ?? true ? 'Requerido' : null,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: precioController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Precio unitario',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     prefixText: '\$',
+                    prefixIcon: const Icon(Icons.attach_money),
                   ),
                   keyboardType: TextInputType.number,
                   validator: (v) => v?.isEmpty ?? true ? 'Requerido' : null,
@@ -203,15 +455,19 @@ class _ComprasPageState extends State<ComprasPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+            child: Text(
+              'Cancelar',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () {
               if (formKey.currentState!.validate()) {
                 final cantidad = int.parse(cantidadController.text);
                 final precio = double.parse(precioController.text);
                 final compra = Compra(
-                  servicioId: 1, // Temporal, en producción vincularlo a un servicio real
+                  servicioId:
+                      1, // Temporal, en producción vincularlo a un servicio real
                   item: itemController.text,
                   cantidad: cantidad,
                   precioUnitario: precio,
@@ -222,6 +478,13 @@ class _ComprasPageState extends State<ComprasPage> {
                 Navigator.pop(context);
               }
             },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green.shade700,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
             child: const Text('Guardar'),
           ),
         ],

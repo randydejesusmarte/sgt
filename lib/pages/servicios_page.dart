@@ -305,7 +305,8 @@ class _ServiciosPageState extends State<ServiciosPage> {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  DateFormat('dd/MM/yyyy').format(servicio.fecha),
+                                  DateFormat('dd/MM/yyyy')
+                                      .format(servicio.fecha),
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: Colors.grey.shade600,
@@ -351,7 +352,6 @@ class _ServiciosPageState extends State<ServiciosPage> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  
                   Text(
                     servicio.descripcion,
                     style: TextStyle(
@@ -361,7 +361,6 @@ class _ServiciosPageState extends State<ServiciosPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  
                   if (cliente != null && vehiculo != null) ...[
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -420,7 +419,6 @@ class _ServiciosPageState extends State<ServiciosPage> {
                     ),
                     const SizedBox(height: 8),
                   ],
-                  
                   if (empleado != null)
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -457,7 +455,6 @@ class _ServiciosPageState extends State<ServiciosPage> {
                         ],
                       ),
                     ),
-                  
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
@@ -561,14 +558,39 @@ class _ServiciosPageState extends State<ServiciosPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Cambiar Estado'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildEstadoRadio('Pendiente', 'pendiente', servicio),
-            _buildEstadoRadio('En Proceso', 'en_proceso', servicio),
-            _buildEstadoRadio('Completado', 'completado', servicio),
-            _buildEstadoRadio('Cancelado', 'cancelado', servicio),
-          ],
+        content: RadioGroup<String>(
+          groupValue: servicio.estado,
+          onChanged: (newValue) {
+            if (newValue != null) {
+              final updated = Servicio(
+                id: servicio.id,
+                vehiculoId: servicio.vehiculoId,
+                empleadoId: servicio.empleadoId,
+                descripcion: servicio.descripcion,
+                costo: servicio.costo,
+                fecha: servicio.fecha,
+                estado: newValue,
+                notas: servicio.notas,
+              );
+              _servicioBloc.add(UpdateServicio(updated));
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Estado actualizado a: $newValue'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildEstadoRadio('Pendiente', 'pendiente'),
+              _buildEstadoRadio('En Proceso', 'en_proceso'),
+              _buildEstadoRadio('Completado', 'completado'),
+              _buildEstadoRadio('Cancelado', 'cancelado'),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -580,43 +602,10 @@ class _ServiciosPageState extends State<ServiciosPage> {
     );
   }
 
-  Widget _buildEstadoRadio(String label, String value, Servicio servicio) {
-    // La clave para la selección sigue siendo la comparación
-    // que se hace internamente por el RadioListTile (aunque groupValue esté deprecado)
-    // y la reconstrucción del widget con el nuevo 'estado'.
-
+  Widget _buildEstadoRadio(String label, String value) {
     return RadioListTile<String>(
       title: Text(label),
       value: value,
-      // **Se elimina groupValue para seguir la recomendación de usar un ancestro**
-      selected: servicio.estado == value, // Usamos 'selected' para destacar el título/subtítulo
-      onChanged: (newValue) {
-        if (newValue != null) {
-          final updated = Servicio(
-            id: servicio.id,
-            vehiculoId: servicio.vehiculoId,
-            empleadoId: servicio.empleadoId,
-            descripcion: servicio.descripcion,
-            costo: servicio.costo,
-            fecha: servicio.fecha,
-            estado: newValue, // Este es el valor clave que actualiza el estado
-            notas: servicio.notas,
-          );
-          _servicioBloc.add(UpdateServicio(updated));
-          // Ya que el Bloc se actualiza, la vista se reconstruirá,
-          // mostrando el nuevo estado seleccionado.
-          Navigator.pop(context); 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Estado actualizado a: $label'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      },
-      // Puedes añadir el control visual Radio.value aquí si fuera un Radio estándar,
-      // pero RadioListTile lo maneja internamente.
-      // El valor por el cual se selecciona *aún* es el estado del servicio.
     );
   }
 
@@ -710,7 +699,8 @@ class _ServiciosPageState extends State<ServiciosPage> {
     }
 
     // Cargar servicios predefinidos
-    final serviciosPredefinidos = await Modular.get<ServicioPredefinidoRepository>().getActivos();
+    final serviciosPredefinidos =
+        await Modular.get<ServicioPredefinidoRepository>().getActivos();
 
     Cliente? clienteSeleccionado;
     Vehiculo? vehiculoSeleccionado;
@@ -785,7 +775,8 @@ class _ServiciosPageState extends State<ServiciosPage> {
                         setDialogState(() {});
                       }
                     },
-                    validator: (v) => v == null ? 'Selecciona un cliente' : null,
+                    validator: (v) =>
+                        v == null ? 'Selecciona un cliente' : null,
                   ),
                   const SizedBox(height: 16),
                   _buildDropdownField<Vehiculo?>(
@@ -795,16 +786,18 @@ class _ServiciosPageState extends State<ServiciosPage> {
                     items: vehiculos.map((vehiculo) {
                       return DropdownMenuItem(
                         value: vehiculo,
-                        child: Text('${vehiculo.marca} ${vehiculo.modelo} - ${vehiculo.placa}'),
+                        child: Text(
+                            '${vehiculo.marca} ${vehiculo.modelo} - ${vehiculo.placa}'),
                       );
                     }).toList(),
                     onChanged: (value) {
                       setDialogState(() => vehiculoSeleccionado = value);
                     },
-                    validator: (v) => v == null ? 'Selecciona un vehículo' : null,
+                    validator: (v) =>
+                        v == null ? 'Selecciona un vehículo' : null,
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Switch para elegir entre servicio predefinido o personalizado
                   if (serviciosPredefinidos.isNotEmpty)
                     Container(
@@ -812,16 +805,19 @@ class _ServiciosPageState extends State<ServiciosPage> {
                       decoration: BoxDecoration(
                         color: Colors.indigo.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.indigo.withValues(alpha: 0.2)),
+                        border: Border.all(
+                            color: Colors.indigo.withValues(alpha: 0.2)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.settings_applications, size: 20, color: Colors.indigo),
+                          const Icon(Icons.settings_applications,
+                              size: 20, color: Colors.indigo),
                           const SizedBox(width: 8),
                           const Expanded(
                             child: Text(
                               'Usar servicio predefinido',
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                              style: TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.w500),
                             ),
                           ),
                           Switch(
@@ -840,12 +836,13 @@ class _ServiciosPageState extends State<ServiciosPage> {
                         ],
                       ),
                     ),
-                  
+
                   if (serviciosPredefinidos.isNotEmpty)
                     const SizedBox(height: 16),
-                  
+
                   // Mostrar dropdown de servicios predefinidos o campos manuales
-                  if (usarServicioPredefinido && serviciosPredefinidos.isNotEmpty) ...[
+                  if (usarServicioPredefinido &&
+                      serviciosPredefinidos.isNotEmpty) ...[
                     _buildDropdownField<ServicioPredefinido?>(
                       value: servicioPredefinidoSeleccionado,
                       label: 'Servicio Predefinido *',
@@ -860,7 +857,8 @@ class _ServiciosPageState extends State<ServiciosPage> {
                               Text(servicio.nombre),
                               Text(
                                 '\$${servicio.precio.toStringAsFixed(2)}${servicio.categoria != null ? ' - ${servicio.categoria}' : ''}',
-                                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.grey),
                               ),
                             ],
                           ),
@@ -870,21 +868,27 @@ class _ServiciosPageState extends State<ServiciosPage> {
                         setDialogState(() {
                           servicioPredefinidoSeleccionado = value;
                           if (value != null) {
-                            descripcionController.text = value.descripcion ?? value.nombre;
-                            costoController.text = value.precio.toStringAsFixed(2);
+                            descripcionController.text =
+                                value.descripcion ?? value.nombre;
+                            costoController.text =
+                                value.precio.toStringAsFixed(2);
                           }
                         });
                       },
-                      validator: (v) => v == null ? 'Selecciona un servicio' : null,
+                      validator: (v) =>
+                          v == null ? 'Selecciona un servicio' : null,
                     ),
                     const SizedBox(height: 16),
                   ],
-                  
+
                   // Descripción editable
-                  if (!usarServicioPredefinido || servicioPredefinidoSeleccionado != null || serviciosPredefinidos.isEmpty) ...[
+                  if (!usarServicioPredefinido ||
+                      servicioPredefinidoSeleccionado != null ||
+                      serviciosPredefinidos.isEmpty) ...[
                     _buildTextField(
                       controller: descripcionController,
-                      label: usarServicioPredefinido && servicioPredefinidoSeleccionado != null
+                      label: usarServicioPredefinido &&
+                              servicioPredefinidoSeleccionado != null
                           ? 'Descripción (puedes editarla)'
                           : 'Descripción del servicio *',
                       icon: Icons.description,
@@ -893,12 +897,15 @@ class _ServiciosPageState extends State<ServiciosPage> {
                     ),
                     const SizedBox(height: 16),
                   ],
-                  
+
                   // Costo editable
-                  if (!usarServicioPredefinido || servicioPredefinidoSeleccionado != null || serviciosPredefinidos.isEmpty) ...[
+                  if (!usarServicioPredefinido ||
+                      servicioPredefinidoSeleccionado != null ||
+                      serviciosPredefinidos.isEmpty) ...[
                     _buildTextField(
                       controller: costoController,
-                      label: usarServicioPredefinido && servicioPredefinidoSeleccionado != null
+                      label: usarServicioPredefinido &&
+                              servicioPredefinidoSeleccionado != null
                           ? 'Costo (ajustable)'
                           : 'Costo estimado *',
                       icon: Icons.attach_money,
@@ -907,7 +914,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
                     ),
                     const SizedBox(height: 16),
                   ],
-                  
+
                   _buildDropdownField<Empleado?>(
                     value: empleadoSeleccionado,
                     label: 'Mecánico Asignado',
@@ -920,7 +927,8 @@ class _ServiciosPageState extends State<ServiciosPage> {
                       ...empleados.map((empleado) {
                         return DropdownMenuItem<Empleado?>(
                           value: empleado,
-                          child: Text('${empleado.nombre}${empleado.especialidad != null ? ' - ${empleado.especialidad}' : ''}'),
+                          child: Text(
+                              '${empleado.nombre}${empleado.especialidad != null ? ' - ${empleado.especialidad}' : ''}'),
                         );
                       }),
                     ],
@@ -934,13 +942,18 @@ class _ServiciosPageState extends State<ServiciosPage> {
                     label: 'Estado',
                     icon: Icons.flag,
                     items: const [
-                      DropdownMenuItem(value: 'pendiente', child: Text('Pendiente')),
-                      DropdownMenuItem(value: 'en_proceso', child: Text('En Proceso')),
-                      DropdownMenuItem(value: 'completado', child: Text('Completado')),
-                      DropdownMenuItem(value: 'cancelado', child: Text('Cancelado')),
+                      DropdownMenuItem(
+                          value: 'pendiente', child: Text('Pendiente')),
+                      DropdownMenuItem(
+                          value: 'en_proceso', child: Text('En Proceso')),
+                      DropdownMenuItem(
+                          value: 'completado', child: Text('Completado')),
+                      DropdownMenuItem(
+                          value: 'cancelado', child: Text('Cancelado')),
                     ],
                     onChanged: (value) {
-                      setDialogState(() => estadoSeleccionado = value ?? 'pendiente');
+                      setDialogState(
+                          () => estadoSeleccionado = value ?? 'pendiente');
                     },
                   ),
                   const SizedBox(height: 16),
@@ -973,11 +986,13 @@ class _ServiciosPageState extends State<ServiciosPage> {
                     costo: double.parse(costoController.text),
                     fecha: DateTime.now(),
                     estado: estadoSeleccionado,
-                    notas: notasController.text.isEmpty ? null : notasController.text,
+                    notas: notasController.text.isEmpty
+                        ? null
+                        : notasController.text,
                   );
                   _servicioBloc.add(CreateServicio(servicio));
                   Navigator.pop(context);
-                  
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: const Row(

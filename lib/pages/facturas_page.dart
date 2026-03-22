@@ -45,7 +45,7 @@ class _FacturasPageState extends State<FacturasPage> {
 
       final cliente = await clienteRepo.getById(factura.clienteId);
       final detalles = await detalleRepo.getByFacturaId(factura.id);
-      
+
       if (cliente == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -61,7 +61,7 @@ class _FacturasPageState extends State<FacturasPage> {
       // Buscar el servicio en los detalles
       dynamic servicio;
       dynamic vehiculo;
-      
+
       for (var detalle in detalles) {
         if (detalle.servicioId != null) {
           servicio = await servicioRepo.getById(detalle.servicioId!);
@@ -93,6 +93,9 @@ class _FacturasPageState extends State<FacturasPage> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -102,6 +105,8 @@ class _FacturasPageState extends State<FacturasPage> {
         title: const Text('Facturas'),
         backgroundColor: Colors.purple.shade700,
         foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.filter_list),
@@ -110,186 +115,428 @@ class _FacturasPageState extends State<FacturasPage> {
             },
             itemBuilder: (context) => [
               const PopupMenuItem(value: 'todas', child: Text('Todas')),
-              const PopupMenuItem(value: 'pendiente', child: Text('Pendientes')),
+              const PopupMenuItem(
+                  value: 'pendiente', child: Text('Pendientes')),
               const PopupMenuItem(value: 'pagada', child: Text('Pagadas')),
-              const PopupMenuItem(value: 'cancelada', child: Text('Canceladas')),
+              const PopupMenuItem(
+                  value: 'cancelada', child: Text('Canceladas')),
             ],
           ),
         ],
       ),
-      body: BlocBuilder<FacturaBloc, FacturaState>(
-        bloc: _bloc,
-        builder: (context, state) {
-          if (state is FacturaLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (state is FacturaError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text('Error: ${state.message}'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => _bloc.add(LoadFacturas()),
-                    child: const Text('Reintentar'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          if (state is FacturaLoaded) {
-            var facturasFiltradas = state.facturas;
-            if (_filtroEstado != 'todas') {
-              facturasFiltradas = facturasFiltradas
-                  .where((f) => f.estado == _filtroEstado)
-                  .toList();
-            }
-
-            if (facturasFiltradas.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.receipt_long_outlined, size: 80, color: Colors.grey),
-                    const SizedBox(height: 16),
-                    Text(_filtroEstado == 'todas' 
-                        ? 'No hay facturas registradas'
-                        : 'No hay facturas con estado: $_filtroEstado'),
-                  ],
-                ),
-              );
-            }
-
-            final totalFacturado = facturasFiltradas
-                .where((f) => f.estado == 'pagada')
-                .fold<double>(0, (sum, f) => sum + f.total);
-            
-            final totalPendiente = facturasFiltradas
-                .where((f) => f.estado == 'pendiente')
-                .fold<double>(0, (sum, f) => sum + f.total);
-
-            return Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  color: Colors.purple.shade50,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.purple.shade700.withValues(alpha: 0.1),
+              Colors.white,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: BlocBuilder<FacturaBloc, FacturaState>(
+            bloc: _bloc,
+            builder: (context, state) {
+              if (state is FacturaLoading) {
+                return Center(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Total Pagado:', style: TextStyle(fontSize: 14)),
-                                Text(
-                                  '\$${totalFacturado.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green.shade700,
-                                  ),
-                                ),
-                              ],
+                      CircularProgressIndicator(
+                        color: Colors.purple.shade700,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Cargando facturas...',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              if (state is FacturaError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Colors.red.shade400,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Error',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          state.message,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          onPressed: () => _bloc.add(LoadFacturas()),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Reintentar'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.purple.shade700,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
                             ),
                           ),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                const Text('Pendiente:', style: TextStyle(fontSize: 14)),
-                                Text(
-                                  '\$${totalPendiente.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.orange.shade700,
-                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              if (state is FacturaLoaded) {
+                var facturasFiltradas = state.facturas;
+                if (_filtroEstado != 'todas') {
+                  facturasFiltradas = facturasFiltradas
+                      .where((f) => f.estado == _filtroEstado)
+                      .toList();
+                }
+
+                if (facturasFiltradas.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.receipt_long_outlined,
+                            size: 80,
+                            color: Colors.grey.shade400,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _filtroEstado == 'todas'
+                                ? 'No hay facturas registradas'
+                                : 'No hay facturas con estado: $_filtroEstado',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade700,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                final totalFacturado = facturasFiltradas
+                    .where((f) => f.estado == 'pagada')
+                    .fold<double>(0, (sum, f) => sum + f.total);
+
+                final totalPendiente = facturasFiltradas
+                    .where((f) => f.estado == 'pendiente')
+                    .fold<double>(0, (sum, f) => sum + f.total);
+
+                return Column(
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.purple.shade700,
+                            Colors.purple.shade900,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.purple.withValues(alpha: 0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Total Pagado',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.purple.shade100,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '\$${totalFacturado.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
+                              Container(
+                                height: 40,
+                                width: 1,
+                                color: Colors.purple.shade500,
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      'Pendiente',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.purple.shade100,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '\$${totalPendiente.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              _filtroEstado == 'todas'
+                                  ? 'Todas (${facturasFiltradas.length})'
+                                  : '${_filtroEstado.toUpperCase()} (${facturasFiltradas.length})',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Chip(
-                        label: Text(_filtroEstado == 'todas' 
-                          ? 'Todas (${facturasFiltradas.length})'
-                          : '${_filtroEstado.toUpperCase()} (${facturasFiltradas.length})'),
-                        backgroundColor: Colors.purple.shade100,
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: facturasFiltradas.length,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.03,
+                          vertical: 8,
+                        ),
+                        physics: const BouncingScrollPhysics(),
+                        itemBuilder: (context, index) {
+                          final factura = facturasFiltradas[index];
+                          return _buildFacturaCard(context, factura, isMobile);
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              return const Center(child: Text('Estado desconocido'));
+            },
+          ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => Modular.to.navigate('/facturas/nueva'),
+        backgroundColor: Colors.purple.shade700,
+        icon: const Icon(Icons.add),
+        label: isMobile ? const SizedBox.shrink() : const Text('Nueva Factura'),
+      ),
+    );
+  }
+
+  Widget _buildFacturaCard(
+    BuildContext context,
+    dynamic factura,
+    bool isMobile,
+  ) {
+    final estadoColor = _getEstadoColor(factura.estado);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        shadowColor: estadoColor.withValues(alpha: 0.2),
+        child: InkWell(
+          onTap: () => _showFacturaMenu(context, factura),
+          borderRadius: BorderRadius.circular(16),
+          splashColor: estadoColor.withValues(alpha: 0.1),
+          highlightColor: estadoColor.withValues(alpha: 0.05),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white,
+                  estadoColor.withValues(alpha: 0.02),
+                ],
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Container(
+                    width: isMobile ? 50 : 60,
+                    height: isMobile ? 50 : 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          estadoColor,
+                          estadoColor.withValues(alpha: 0.7),
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: estadoColor.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.receipt,
+                        color: Colors.white,
+                        size: isMobile ? 24 : 28,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          factura.numeroFactura,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: isMobile ? 16 : 18,
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_today,
+                              size: 14,
+                              color: Colors.grey.shade600,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              DateFormat('dd/MM/yyyy').format(factura.fecha),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: estadoColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            factura.estado.toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: estadoColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '\$${factura.total.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: isMobile ? 18 : 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Total',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                        ),
                       ),
                     ],
                   ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: facturasFiltradas.length,
-                    padding: const EdgeInsets.all(8),
-                    itemBuilder: (context, index) {
-                      final factura = facturasFiltradas[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: _getEstadoColor(factura.estado),
-                            child: const Icon(Icons.receipt, color: Colors.white),
-                          ),
-                          title: Text(
-                            factura.numeroFactura,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Cliente ID: ${factura.clienteId}'),
-                              Text(DateFormat('dd/MM/yyyy').format(factura.fecha)),
-                              Chip(
-                                label: Text(
-                                  factura.estado.toUpperCase(),
-                                  style: const TextStyle(fontSize: 10, color: Colors.white),
-                                ),
-                                backgroundColor: _getEstadoColor(factura.estado),
-                                padding: EdgeInsets.zero,
-                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                            ],
-                          ),
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                '\$${factura.total.toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          onTap: () => _showFacturaMenu(context, factura),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            );
-          }
-
-          return const Center(child: Text('Estado desconocido'));
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Modular.to.navigate('/facturas/nueva'),
-        backgroundColor: Colors.purple.shade700,
-        child: const Icon(Icons.add),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -315,73 +562,71 @@ class _FacturasPageState extends State<FacturasPage> {
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.print, color: Colors.blue),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.print, color: Colors.blue),
+              ),
               title: const Text('Imprimir Factura'),
               onTap: () {
                 Navigator.pop(context);
                 _imprimirFactura(factura);
               },
             ),
-            const Divider(),
+            const SizedBox(height: 8),
             ListTile(
-              leading: const Icon(Icons.check_circle, color: Colors.green),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.check_circle, color: Colors.green),
+              ),
               title: const Text('Marcar como pagada'),
               onTap: () {
                 _bloc.add(UpdateFacturaEstado(factura.id!, 'pagada'));
                 Navigator.pop(context);
               },
             ),
+            const SizedBox(height: 8),
             ListTile(
-              leading: const Icon(Icons.pending, color: Colors.orange),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.pending, color: Colors.orange),
+              ),
               title: const Text('Marcar como pendiente'),
               onTap: () {
                 _bloc.add(UpdateFacturaEstado(factura.id!, 'pendiente'));
                 Navigator.pop(context);
               },
             ),
+            const SizedBox(height: 8),
             ListTile(
-              leading: const Icon(Icons.cancel, color: Colors.red),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.cancel, color: Colors.red),
+              ),
               title: const Text('Cancelar factura'),
               onTap: () {
                 _bloc.add(UpdateFacturaEstado(factura.id!, 'cancelada'));
                 Navigator.pop(context);
               },
             ),
-            //const Divider(),
-            //ListTile(
-            //  leading: const Icon(Icons.delete, color: Colors.red),
-            //  title: const Text('Eliminar', style: TextStyle(color: Colors.red)),
-            //  onTap: () {
-            //    Navigator.pop(context);
-            //    _showDeleteDialog(context, factura.id!);
-            //  },
-            //),
           ],
         ),
       ),
     );
   }
-
-  //void _showDeleteDialog(BuildContext context, int id) {
-  //  showDialog(
-  //    context: context,
-  //    builder: (context) => AlertDialog(
-  //      title: const Text('Confirmar eliminación'),
-  //      content: const Text('¿Estás seguro de eliminar esta factura?'),
-  //      actions: [
-  //        TextButton(
-  //          onPressed: () => Navigator.pop(context),
-  //          child: const Text('Cancelar'),
-  //        ),
-  //        TextButton(
-  //          onPressed: () {
-  //            _bloc.add(DeleteFactura(id));
-  //            Navigator.pop(context);
-  //          },
-  //          child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
-  //        ),
-  //      ],
-  //    ),
-  //  );
-  //}
 }

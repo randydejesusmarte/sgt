@@ -18,7 +18,8 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
   final ClienteRepository _clienteRepo = Modular.get<ClienteRepository>();
   final ServicioRepository _servicioRepo = Modular.get<ServicioRepository>();
   final VehiculoRepository _vehiculoRepo = Modular.get<VehiculoRepository>();
-  final InventarioRepository _inventarioRepo = Modular.get<InventarioRepository>();
+  final InventarioRepository _inventarioRepo =
+      Modular.get<InventarioRepository>();
   bool _guardando = false;
 
   List<Cliente> _clientes = [];
@@ -26,7 +27,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
   Servicio? _servicioSeleccionado;
   List<Servicio> _serviciosCliente = [];
   final List<DetalleFactura> _detalles = [];
-  
+
   final double _tasaImpuesto = 18.0;
   double _descuento = 0.0;
   String _numeroFactura = '';
@@ -46,12 +47,12 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
     print('👂 Configurando listener del BLoC');
     _blocSubscription = _bloc.stream.listen((state) {
       print('🔔 Nuevo estado del BLoC: ${state.runtimeType}');
-      
+
       if (!mounted) {
         print('⚠️ Widget no montado, ignorando estado');
         return;
       }
-      
+
       if (state is FacturaLoaded) {
         print('✅ Factura guardada exitosamente');
         setState(() => _guardando = false);
@@ -62,7 +63,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
             duration: Duration(seconds: 2),
           ),
         );
-        
+
         // Esperar un momento antes de navegar
         Future.delayed(const Duration(milliseconds: 500), () {
           if (mounted) {
@@ -96,11 +97,11 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
     try {
       _clientes = await _clienteRepo.getAll();
       print('✅ Clientes cargados: ${_clientes.length}');
-      
+
       final facturaRepo = Modular.get<FacturaRepository>();
       _numeroFactura = await facturaRepo.getNextNumeroFactura();
       print('✅ Número de factura: $_numeroFactura');
-      
+
       if (mounted) {
         setState(() {});
       }
@@ -122,17 +123,20 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
     try {
       final vehiculos = await _vehiculoRepo.getByClienteId(clienteId);
       print('   Vehículos encontrados: ${vehiculos.length}');
-      
+
       List<Servicio> servicios = [];
       for (var vehiculo in vehiculos) {
-        final serviciosVehiculo = await _servicioRepo.getByVehiculoId(vehiculo.id!);
-        final completados = serviciosVehiculo.where((s) => s.estado == 'completado').toList();
-        print('   Vehículo ${vehiculo.id}: ${completados.length} servicios completados');
+        final serviciosVehiculo =
+            await _servicioRepo.getByVehiculoId(vehiculo.id!);
+        final completados =
+            serviciosVehiculo.where((s) => s.estado == 'completado').toList();
+        print(
+            '   Vehículo ${vehiculo.id}: ${completados.length} servicios completados');
         servicios.addAll(completados);
       }
-      
+
       print('✅ Total servicios completados: ${servicios.length}');
-      
+
       if (mounted) {
         setState(() {
           _serviciosCliente = servicios;
@@ -160,7 +164,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
     print('➕ Agregando item del inventario');
     final inventarioItems = await _inventarioRepo.getDisponibles();
     print('   Items disponibles: ${inventarioItems.length}');
-    
+
     if (inventarioItems.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -204,7 +208,8 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
                           Text(item.nombre),
                           Text(
                             'Disponible: ${item.cantidadDisponible} | \$${item.precioVenta.toStringAsFixed(2)}',
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.grey),
                           ),
                         ],
                       ),
@@ -214,7 +219,8 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
                     setDialogState(() {
                       itemSeleccionado = value;
                       if (value != null) {
-                        precioController.text = value.precioVenta.toStringAsFixed(2);
+                        precioController.text =
+                            value.precioVenta.toStringAsFixed(2);
                       }
                     });
                   },
@@ -256,17 +262,18 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
                     precioController.text.isNotEmpty) {
                   final cantidad = int.tryParse(cantidadController.text) ?? 0;
                   final precio = double.tryParse(precioController.text) ?? 0;
-                  
+
                   if (cantidad <= 0 || precio <= 0) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Cantidad y precio deben ser mayores a 0'),
+                        content:
+                            Text('Cantidad y precio deben ser mayores a 0'),
                         backgroundColor: Colors.red,
                       ),
                     );
                     return;
                   }
-                  
+
                   if (cantidad > itemSeleccionado!.cantidadDisponible) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -277,11 +284,13 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
                     return;
                   }
 
-                  print('✅ Item agregado: ${itemSeleccionado!.nombre} x$cantidad');
+                  print(
+                      '✅ Item agregado: ${itemSeleccionado!.nombre} x$cantidad');
                   setState(() {
                     _detalles.add(DetalleFactura(
                       facturaId: 0,
-                      descripcion: '${itemSeleccionado!.nombre} (Inventario: ${itemSeleccionado!.codigo})',
+                      descripcion:
+                          '${itemSeleccionado!.nombre} (Inventario: ${itemSeleccionado!.codigo})',
                       cantidad: cantidad,
                       precioUnitario: precio,
                       total: cantidad * precio,
@@ -300,17 +309,17 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
 
   void _guardarFactura() async {
     print('\n🚀 ========== INICIANDO GUARDADO DE FACTURA ==========');
-    
+
     if (_guardando) {
       print('⚠️ Ya se está guardando, ignorando clic');
       return;
     }
-    
+
     if (!_formKey.currentState!.validate()) {
       print('❌ Formulario no válido');
       return;
     }
-    
+
     if (_clienteSeleccionado == null) {
       print('❌ No hay cliente seleccionado');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -318,7 +327,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
       );
       return;
     }
-    
+
     if (_servicioSeleccionado == null) {
       print('❌ No hay servicio seleccionado');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -326,7 +335,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
       );
       return;
     }
-    
+
     if (_detalles.isEmpty) {
       print('❌ No hay items del inventario');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -341,14 +350,15 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
     print('   Items inventario: ${_detalles.length}');
 
     setState(() => _guardando = true);
-    
+
     try {
       // 1. Verificar inventario
       print('\n📦 Verificando inventario...');
       for (var i = 0; i < _detalles.length; i++) {
         final detalle = _detalles[i];
         if (detalle.descripcion.contains('Inventario:')) {
-          final match = RegExp(r'Inventario:\s*([^)]+)').firstMatch(detalle.descripcion);
+          final match =
+              RegExp(r'Inventario:\s*([^)]+)').firstMatch(detalle.descripcion);
           if (match != null) {
             final codigo = match.group(1)?.trim();
             print('   Verificando item $i: $codigo');
@@ -357,9 +367,11 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
               if (item == null) {
                 throw Exception('Item no encontrado: $codigo');
               }
-              print('      Disponible: ${item.cantidadDisponible}, Necesario: ${detalle.cantidad}');
+              print(
+                  '      Disponible: ${item.cantidadDisponible}, Necesario: ${detalle.cantidad}');
               if (item.cantidadDisponible < detalle.cantidad) {
-                throw Exception('Cantidad insuficiente de ${item.nombre}. Disponible: ${item.cantidadDisponible}');
+                throw Exception(
+                    'Cantidad insuficiente de ${item.nombre}. Disponible: ${item.cantidadDisponible}');
               }
             }
           }
@@ -369,14 +381,16 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
 
       // 2. Preparar datos
       print('\n📝 Preparando datos de factura...');
-      final vehiculo = await _vehiculoRepo.getById(_servicioSeleccionado!.vehiculoId);
+      final vehiculo =
+          await _vehiculoRepo.getById(_servicioSeleccionado!.vehiculoId);
       print('   Vehículo: ${vehiculo?.marca} ${vehiculo?.modelo}');
-      
+
       final detallesConServicio = [
         DetalleFactura(
           facturaId: 0,
           servicioId: _servicioSeleccionado!.id,
-          descripcion: '${_servicioSeleccionado!.descripcion} - ${vehiculo?.marca ?? ''} ${vehiculo?.modelo ?? ''} (${vehiculo?.placa ?? ''})',
+          descripcion:
+              '${_servicioSeleccionado!.descripcion} - ${vehiculo?.marca ?? ''} ${vehiculo?.modelo ?? ''} (${vehiculo?.placa ?? ''})',
           cantidad: 1,
           precioUnitario: _servicioSeleccionado!.costo,
           total: _servicioSeleccionado!.costo,
@@ -410,7 +424,8 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
       for (var i = 0; i < _detalles.length; i++) {
         final detalle = _detalles[i];
         if (detalle.descripcion.contains('Inventario:')) {
-          final match = RegExp(r'Inventario:\s*([^)]+)').firstMatch(detalle.descripcion);
+          final match =
+              RegExp(r'Inventario:\s*([^)]+)').firstMatch(detalle.descripcion);
           if (match != null) {
             final codigo = match.group(1)?.trim();
             if (codigo != null) {
@@ -422,7 +437,8 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
                   detalle.cantidad,
                   'salida',
                   referencia: 'Factura: $_numeroFactura',
-                  motivo: 'Venta - Servicio: ${_servicioSeleccionado!.descripcion}',
+                  motivo:
+                      'Venta - Servicio: ${_servicioSeleccionado!.descripcion}',
                 );
                 print('   ✅ Inventario actualizado');
               }
@@ -437,14 +453,13 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
       _bloc.add(AddFactura(factura, detallesConServicio));
       print('✅ Evento AddFactura enviado');
       print('⏳ Esperando respuesta del BLoC...');
-      
     } catch (e, stackTrace) {
       print('\n❌ ERROR EN GUARDADO:');
       print('   Mensaje: $e');
       print('   Stack trace: $stackTrace');
-      
+
       setState(() => _guardando = false);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -455,7 +470,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
         );
       }
     }
-    
+
     print('========== FIN GUARDADO DE FACTURA ==========\n');
   }
 
@@ -472,329 +487,435 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
         ),
         title: const Text('Nueva Factura'),
         backgroundColor: Colors.purple.shade700,
+        elevation: 0,
+        centerTitle: true,
       ),
-      body: Form(
-        key: _formKey,
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Factura: $_numeroFactura',
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Fecha: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
-                              style: TextStyle(color: Colors.grey.shade600),
-                            ),
-                          ],
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.purple.shade700.withValues(alpha: 0.1),
+              Colors.white,
+            ],
+          ),
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Card(
+                        elevation: 4,
+                        shadowColor: Colors.purple.withValues(alpha: 0.3),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<Cliente>(
-                      decoration: const InputDecoration(
-                        labelText: 'Cliente *',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.person),
-                      ),
-                      items: _clientes.map((cliente) {
-                        return DropdownMenuItem(
-                          value: cliente,
-                          child: Text(cliente.nombre),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        print('Cliente seleccionado: ${value?.nombre}');
-                        setState(() {
-                          _clienteSeleccionado = value;
-                          _servicioSeleccionado = null;
-                          _serviciosCliente = [];
-                        });
-                        if (value != null) {
-                          _cargarServiciosCliente(value.id!);
-                        }
-                      },
-                      validator: (value) =>
-                          value == null ? 'Selecciona un cliente' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    if (_clienteSeleccionado != null) ...[
-                      DropdownButtonFormField<Servicio>(
-                        decoration: const InputDecoration(
-                          labelText: 'Servicio Completado *',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.build),
-                        ),
-                        initialValue: _servicioSeleccionado,
-                        items: _serviciosCliente.map((servicio) {
-                          return DropdownMenuItem(
-                            value: servicio,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.white,
+                                Colors.purple.withValues(alpha: 0.05),
+                              ],
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(servicio.descripcion),
-                                Text(
-                                  '\$${servicio.costo.toStringAsFixed(2)}',
-                                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.purple
+                                            .withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        Icons.receipt_long,
+                                        color: Colors.purple.shade700,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Factura: $_numeroFactura',
+                                          style: const TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Fecha: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+                                          style: TextStyle(
+                                              color: Colors.grey.shade600),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<Cliente>(
+                        decoration: InputDecoration(
+                          labelText: 'Cliente *',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                                color: Colors.purple.shade700, width: 2),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          prefixIcon: const Icon(Icons.person),
+                        ),
+                        items: _clientes.map((cliente) {
+                          return DropdownMenuItem(
+                            value: cliente,
+                            child: Text(cliente.nombre),
                           );
                         }).toList(),
                         onChanged: (value) {
-                          print('Servicio seleccionado: ${value?.descripcion}');
-                          setState(() => _servicioSeleccionado = value);
+                          print('Cliente seleccionado: ${value?.nombre}');
+                          setState(() {
+                            _clienteSeleccionado = value;
+                            _servicioSeleccionado = null;
+                            _serviciosCliente = [];
+                          });
+                          if (value != null) {
+                            _cargarServiciosCliente(value.id!);
+                          }
                         },
                         validator: (value) =>
-                            value == null ? 'Selecciona un servicio' : null,
+                            value == null ? 'Selecciona un cliente' : null,
                       ),
-                      const SizedBox(height: 24),
-                    ],
-                    if (_servicioSeleccionado != null) ...[
-                      Card(
-                        color: Colors.blue.shade50,
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Servicio Seleccionado:',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(_servicioSeleccionado!.descripcion),
-                              Text(
-                                'Costo: \$${_servicioSeleccionado!.costo.toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  color: Colors.blue.shade700,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Items Utilizados',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                      const SizedBox(height: 16),
+                      if (_clienteSeleccionado != null) ...[
+                        DropdownButtonFormField<Servicio>(
+                          decoration: InputDecoration(
+                            labelText: 'Servicio Completado *',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          ),
-                          ElevatedButton.icon(
-                            onPressed: _agregarItemInventario,
-                            icon: const Icon(Icons.add, size: 18),
-                            label: const Text('Agregar'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.purple.shade700,
-                              foregroundColor: Colors.white,
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide:
+                                  BorderSide(color: Colors.grey.shade300),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      if (_detalles.isEmpty)
-                        const Card(
-                          child: Padding(
-                            padding: EdgeInsets.all(32),
-                            child: Center(
-                              child: Text('No hay items agregados del inventario'),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                  color: Colors.purple.shade700, width: 2),
                             ),
+                            filled: true,
+                            fillColor: Colors.white,
+                            prefixIcon: const Icon(Icons.build),
                           ),
-                        )
-                      else
-                        ..._detalles.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final detalle = entry.value;
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            child: ListTile(
-                              title: Text(detalle.descripcion),
-                              subtitle: Text(
-                                'Cant: ${detalle.cantidad} × \$${detalle.precioUnitario.toStringAsFixed(2)}',
-                              ),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
+                          initialValue: _servicioSeleccionado,
+                          items: _serviciosCliente.map((servicio) {
+                            return DropdownMenuItem(
+                              value: servicio,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  Text(servicio.descripcion),
                                   Text(
-                                    '\$${detalle.total.toStringAsFixed(2)}',
+                                    '\$${servicio.costo.toStringAsFixed(2)}',
                                     style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete, color: Colors.red),
-                                    onPressed: () {
-                                      print('🗑️ Eliminando item $index');
-                                      setState(() => _detalles.removeAt(index));
-                                    },
+                                        fontSize: 12, color: Colors.grey),
                                   ),
                                 ],
                               ),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            print(
+                                'Servicio seleccionado: ${value?.descripcion}');
+                            setState(() => _servicioSeleccionado = value);
+                          },
+                          validator: (value) =>
+                              value == null ? 'Selecciona un servicio' : null,
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                      if (_servicioSeleccionado != null) ...[
+                        Card(
+                          color: Colors.blue.shade50,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Servicio Seleccionado:',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(_servicioSeleccionado!.descripcion),
+                                Text(
+                                  'Costo: \$${_servicioSeleccionado!.costo.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    color: Colors.blue.shade700,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
-                          );
-                        }),
-                      const SizedBox(height: 24),
-                      Card(
-                        color: Colors.purple.shade50,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('Servicio:'),
-                                  Text(
-                                    '\$${_servicioSeleccionado!.costo.toStringAsFixed(2)}',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('Items:'),
-                                  Text(
-                                    '\$${subtotal.toStringAsFixed(2)}',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
-                              const Divider(height: 16),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('Subtotal:'),
-                                  Text(
-                                    '\$${(subtotal + _servicioSeleccionado!.costo).toStringAsFixed(2)}',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('Impuesto ($_tasaImpuesto%):'),
-                                  Text(
-                                    '\$${((subtotal + _servicioSeleccionado!.costo) * (_tasaImpuesto / 100)).toStringAsFixed(2)}',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('Descuento:'),
-                                  SizedBox(
-                                    width: 100,
-                                    child: TextField(
-                                      keyboardType: TextInputType.number,
-                                      decoration: const InputDecoration(
-                                        prefixText: '\$',
-                                        isDense: true,
-                                      ),
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _descuento = double.tryParse(value) ?? 0;
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const Divider(height: 24),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    'TOTAL:',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Text(
-                                    '\$${((subtotal + _servicioSeleccionado!.costo) + ((subtotal + _servicioSeleccionado!.costo) * (_tasaImpuesto / 100)) - _descuento).toStringAsFixed(2)}',
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.purple.shade700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
                           ),
                         ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            if (_servicioSeleccionado != null)
-              Container(
-                padding: const EdgeInsets.all(16),
-                child: ElevatedButton(
-                  onPressed: _guardando ? null : _guardarFactura,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.purple.shade700,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: _guardando
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
+                            const Text(
+                              'Items Utilizados',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Guardando...',
-                              style: const TextStyle(fontSize: 18, color: Colors.white),
+                            ElevatedButton.icon(
+                              onPressed: _agregarItemInventario,
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text('Agregar'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.purple.shade700,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 12),
+                              ),
                             ),
                           ],
-                        )
-                      : const Text(
-                          'Guardar Factura',
-                          style: TextStyle(fontSize: 18, color: Colors.white),
                         ),
+                        const SizedBox(height: 12),
+                        if (_detalles.isEmpty)
+                          const Card(
+                            child: Padding(
+                              padding: EdgeInsets.all(32),
+                              child: Center(
+                                child: Text(
+                                    'No hay items agregados del inventario'),
+                              ),
+                            ),
+                          )
+                        else
+                          ..._detalles.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final detalle = entry.value;
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              child: ListTile(
+                                title: Text(detalle.descripcion),
+                                subtitle: Text(
+                                  'Cant: ${detalle.cantidad} × \$${detalle.precioUnitario.toStringAsFixed(2)}',
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '\$${detalle.total.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete,
+                                          color: Colors.red),
+                                      onPressed: () {
+                                        print('🗑️ Eliminando item $index');
+                                        setState(
+                                            () => _detalles.removeAt(index));
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
+                        const SizedBox(height: 24),
+                        Card(
+                          color: Colors.purple.shade50,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Servicio:'),
+                                    Text(
+                                      '\$${_servicioSeleccionado!.costo.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Items:'),
+                                    Text(
+                                      '\$${subtotal.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Subtotal:'),
+                                    Text(
+                                      '\$${(subtotal + _servicioSeleccionado!.costo).toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('Impuesto ($_tasaImpuesto%):'),
+                                    Text(
+                                      '\$${((subtotal + _servicioSeleccionado!.costo) * (_tasaImpuesto / 100)).toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Descuento:'),
+                                    SizedBox(
+                                      width: 100,
+                                      child: TextField(
+                                        keyboardType: TextInputType.number,
+                                        decoration: const InputDecoration(
+                                          prefixText: '\$',
+                                          isDense: true,
+                                        ),
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _descuento =
+                                                double.tryParse(value) ?? 0;
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 24),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text(
+                                      'TOTAL:',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      '\$${((subtotal + _servicioSeleccionado!.costo) + ((subtotal + _servicioSeleccionado!.costo) * (_tasaImpuesto / 100)) - _descuento).toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.purple.shade700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
-          ],
+              if (_servicioSeleccionado != null)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  child: ElevatedButton(
+                    onPressed: _guardando ? null : _guardarFactura,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purple.shade700,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 4,
+                      shadowColor: Colors.purple.withValues(alpha: 0.4),
+                    ),
+                    child: _guardando
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Guardando...',
+                                style: const TextStyle(
+                                    fontSize: 18, color: Colors.white),
+                              ),
+                            ],
+                          )
+                        : const Text(
+                            'Guardar Factura',
+                            style: TextStyle(fontSize: 18, color: Colors.white),
+                          ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
