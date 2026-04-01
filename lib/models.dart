@@ -40,9 +40,9 @@ class Cliente extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, nombre, telefono, email, direccion, createdAt];
+  List<Object?> get props =>
+      [id, nombre, telefono, email, direccion, createdAt];
 }
-
 
 class Vehiculo extends Equatable {
   final int? id;
@@ -86,7 +86,6 @@ class Vehiculo extends Equatable {
   @override
   List<Object?> get props => [id, clienteId, marca, modelo, anio, placa];
 }
-
 
 class Servicio extends Equatable {
   final int? id;
@@ -136,9 +135,9 @@ class Servicio extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, vehiculoId, empleadoId, descripcion, costo, fecha, estado, notas];
+  List<Object?> get props =>
+      [id, vehiculoId, empleadoId, descripcion, costo, fecha, estado, notas];
 }
-
 
 class Empleado extends Equatable {
   final int? id;
@@ -180,9 +179,9 @@ class Empleado extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, nombre, telefono, especialidad, activo, createdAt];
+  List<Object?> get props =>
+      [id, nombre, telefono, especialidad, activo, createdAt];
 }
-
 
 class Compra extends Equatable {
   final int? id;
@@ -228,9 +227,9 @@ class Compra extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, servicioId, item, cantidad, precioUnitario, total, fecha];
+  List<Object?> get props =>
+      [id, servicioId, item, cantidad, precioUnitario, total, fecha];
 }
-
 
 class Factura extends Equatable {
   final int? id;
@@ -288,9 +287,19 @@ class Factura extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, clienteId, numeroFactura, fecha, subtotal, impuesto, descuento, total, estado, notas];
+  List<Object?> get props => [
+        id,
+        clienteId,
+        numeroFactura,
+        fecha,
+        subtotal,
+        impuesto,
+        descuento,
+        total,
+        estado,
+        notas
+      ];
 }
-
 
 class DetalleFactura extends Equatable {
   final int? id;
@@ -336,9 +345,9 @@ class DetalleFactura extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, facturaId, servicioId, descripcion, cantidad, precioUnitario, total];
+  List<Object?> get props =>
+      [id, facturaId, servicioId, descripcion, cantidad, precioUnitario, total];
 }
-
 
 // ========== MODELO PARA SERVICIOS PREDEFINIDOS ==========
 
@@ -412,9 +421,9 @@ class ServicioPredefinido extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, codigo, nombre, descripcion, precio, categoria, activo, createdAt];
+  List<Object?> get props =>
+      [id, codigo, nombre, descripcion, precio, categoria, activo, createdAt];
 }
-
 
 // ========== MODELOS PARA INVENTARIO ==========
 
@@ -507,7 +516,6 @@ class Inventario extends Equatable {
       ];
 }
 
-
 class MovimientoInventario extends Equatable {
   final int? id;
   final int inventarioId;
@@ -552,5 +560,109 @@ class MovimientoInventario extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, inventarioId, tipo, cantidad, referencia, motivo, fecha];
+  List<Object?> get props =>
+      [id, inventarioId, tipo, cantidad, referencia, motivo, fecha];
+}
+
+// ========== MODELOS PARA SISTEMA DE ORDENES (MARCAS, MODELOS, PIEZAS) ==========
+
+class Marca extends Equatable {
+  final int? id;
+  final String nombre;
+
+  const Marca({
+    this.id,
+    required this.nombre,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'nombre': nombre,
+    };
+  }
+
+  factory Marca.fromMap(Map<String, dynamic> map) {
+    return Marca(
+      id: map['id'] as int?,
+      nombre: map['nombre'] as String,
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, nombre];
+}
+
+class Modelo extends Equatable {
+  final int? id;
+  final int marcaId;
+  final String nombre;
+  final int anio;
+
+  const Modelo({
+    this.id,
+    required this.marcaId,
+    required this.nombre,
+    required this.anio,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'marca_id': marcaId,
+      'nombre': nombre,
+      'anio': anio,
+    };
+  }
+
+  factory Modelo.fromMap(Map<String, dynamic> map) {
+    return Modelo(
+      id: map['id'] as int?,
+      marcaId: map['marca_id'] as int,
+      nombre: map['nombre'] as String,
+      anio: map['anio'] as int,
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, marcaId, nombre, anio];
+}
+
+class Pieza extends Equatable {
+  final int? id;
+  final int modeloId;
+  final String nombre;
+  final String medidas;
+  final String? codigo;
+
+  const Pieza({
+    this.id,
+    required this.modeloId,
+    required this.nombre,
+    required this.medidas,
+    this.codigo,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'modelo_id': modeloId,
+      'nombre': nombre,
+      'medidas': medidas,
+      'codigo': codigo,
+    };
+  }
+
+  factory Pieza.fromMap(Map<String, dynamic> map) {
+    return Pieza(
+      id: map['id'] as int?,
+      modeloId: map['modelo_id'] as int,
+      nombre: map['nombre'] as String,
+      medidas: map['medidas'] as String,
+      codigo: map['codigo'] as String?,
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, modeloId, nombre, medidas, codigo];
 }

@@ -26,7 +26,8 @@ class ClienteRepository {
 
   Future<int> update(Cliente cliente) async {
     final db = await _db.database;
-    return await db.update('clientes', cliente.toMap(), where: 'id = ?', whereArgs: [cliente.id]);
+    return await db.update('clientes', cliente.toMap(),
+        where: 'id = ?', whereArgs: [cliente.id]);
   }
 
   Future<int> delete(int id) async {
@@ -56,20 +57,23 @@ class VehiculoRepository {
 
   Future<List<Vehiculo>> getByClienteId(int clienteId) async {
     final db = await _db.database;
-    final result = await db.query('vehiculos', where: 'cliente_id = ?', whereArgs: [clienteId]);
+    final result = await db
+        .query('vehiculos', where: 'cliente_id = ?', whereArgs: [clienteId]);
     return result.map((map) => Vehiculo.fromMap(map)).toList();
   }
 
   Future<Vehiculo?> getById(int id) async {
     final db = await _db.database;
-    final result = await db.query('vehiculos', where: 'id = ?', whereArgs: [id]);
+    final result =
+        await db.query('vehiculos', where: 'id = ?', whereArgs: [id]);
     if (result.isEmpty) return null;
     return Vehiculo.fromMap(result.first);
   }
 
   Future<int> update(Vehiculo vehiculo) async {
     final db = await _db.database;
-    return await db.update('vehiculos', vehiculo.toMap(), where: 'id = ?', whereArgs: [vehiculo.id]);
+    return await db.update('vehiculos', vehiculo.toMap(),
+        where: 'id = ?', whereArgs: [vehiculo.id]);
   }
 
   Future<int> delete(int id) async {
@@ -96,27 +100,23 @@ class EmpleadoRepository {
 
   Future<List<Empleado>> getActivos() async {
     final db = await _db.database;
-    final result = await db.query('empleados', 
-      where: 'activo = ?', 
-      whereArgs: [1], 
-      orderBy: 'nombre ASC'
-    );
+    final result = await db.query('empleados',
+        where: 'activo = ?', whereArgs: [1], orderBy: 'nombre ASC');
     return result.map((map) => Empleado.fromMap(map)).toList();
   }
 
   Future<Empleado?> getById(int id) async {
     final db = await _db.database;
-    final result = await db.query('empleados', where: 'id = ?', whereArgs: [id]);
+    final result =
+        await db.query('empleados', where: 'id = ?', whereArgs: [id]);
     if (result.isEmpty) return null;
     return Empleado.fromMap(result.first);
   }
 
   Future<int> update(Empleado empleado) async {
     final db = await _db.database;
-    return await db.update('empleados', empleado.toMap(), 
-      where: 'id = ?', 
-      whereArgs: [empleado.id]
-    );
+    return await db.update('empleados', empleado.toMap(),
+        where: 'id = ?', whereArgs: [empleado.id]);
   }
 
   Future<int> delete(int id) async {
@@ -143,20 +143,25 @@ class ServicioRepository {
 
   Future<List<Servicio>> getByVehiculoId(int vehiculoId) async {
     final db = await _db.database;
-    final result = await db.query('servicios', where: 'vehiculo_id = ?', whereArgs: [vehiculoId], orderBy: 'fecha DESC');
+    final result = await db.query('servicios',
+        where: 'vehiculo_id = ?',
+        whereArgs: [vehiculoId],
+        orderBy: 'fecha DESC');
     return result.map((map) => Servicio.fromMap(map)).toList();
   }
 
   Future<Servicio?> getById(int id) async {
     final db = await _db.database;
-    final result = await db.query('servicios', where: 'id = ?', whereArgs: [id]);
+    final result =
+        await db.query('servicios', where: 'id = ?', whereArgs: [id]);
     if (result.isEmpty) return null;
     return Servicio.fromMap(result.first);
   }
 
   Future<int> update(Servicio servicio) async {
     final db = await _db.database;
-    return await db.update('servicios', servicio.toMap(), where: 'id = ?', whereArgs: [servicio.id]);
+    return await db.update('servicios', servicio.toMap(),
+        where: 'id = ?', whereArgs: [servicio.id]);
   }
 
   Future<int> delete(int id) async {
@@ -183,13 +188,15 @@ class CompraRepository {
 
   Future<List<Compra>> getByServicioId(int servicioId) async {
     final db = await _db.database;
-    final result = await db.query('compras', where: 'servicio_id = ?', whereArgs: [servicioId]);
+    final result = await db
+        .query('compras', where: 'servicio_id = ?', whereArgs: [servicioId]);
     return result.map((map) => Compra.fromMap(map)).toList();
   }
 
   Future<int> update(Compra compra) async {
     final db = await _db.database;
-    return await db.update('compras', compra.toMap(), where: 'id = ?', whereArgs: [compra.id]);
+    return await db.update('compras', compra.toMap(),
+        where: 'id = ?', whereArgs: [compra.id]);
   }
 
   Future<int> delete(int id) async {
@@ -216,7 +223,8 @@ class FacturaRepository {
 
   Future<List<Factura>> getByClienteId(int clienteId) async {
     final db = await _db.database;
-    final result = await db.query('facturas', where: 'cliente_id = ?', whereArgs: [clienteId], orderBy: 'fecha DESC');
+    final result = await db.query('facturas',
+        where: 'cliente_id = ?', whereArgs: [clienteId], orderBy: 'fecha DESC');
     return result.map((map) => Factura.fromMap(map)).toList();
   }
 
@@ -229,7 +237,8 @@ class FacturaRepository {
 
   Future<int> update(Factura factura) async {
     final db = await _db.database;
-    return await db.update('facturas', factura.toMap(), where: 'id = ?', whereArgs: [factura.id]);
+    return await db.update('facturas', factura.toMap(),
+        where: 'id = ?', whereArgs: [factura.id]);
   }
 
   Future<int> delete(int id) async {
@@ -239,8 +248,10 @@ class FacturaRepository {
 
   Future<String> getNextNumeroFactura() async {
     final db = await _db.database;
-    final result = await db.rawQuery("SELECT MAX(CAST(SUBSTR(numero_factura, 5) AS INTEGER)) as max_num FROM facturas WHERE numero_factura LIKE 'FAC-%'");
-    final maxNum = result.isNotEmpty ? (result.first['max_num'] as int? ?? 0) : 0;
+    final result = await db.rawQuery(
+        "SELECT MAX(CAST(SUBSTR(numero_factura, 5) AS INTEGER)) as max_num FROM facturas WHERE numero_factura LIKE 'FAC-%'");
+    final maxNum =
+        result.isNotEmpty ? (result.first['max_num'] as int? ?? 0) : 0;
     return 'FAC-${(maxNum + 1).toString().padLeft(6, '0')}';
   }
 }
@@ -257,7 +268,8 @@ class DetalleFacturaRepository {
 
   Future<List<DetalleFactura>> getByFacturaId(int facturaId) async {
     final db = await _db.database;
-    final result = await db.query('detalle_factura', where: 'factura_id = ?', whereArgs: [facturaId]);
+    final result = await db.query('detalle_factura',
+        where: 'factura_id = ?', whereArgs: [facturaId]);
     return result.map((map) => DetalleFactura.fromMap(map)).toList();
   }
 
@@ -268,7 +280,8 @@ class DetalleFacturaRepository {
 
   Future<int> deleteByFacturaId(int facturaId) async {
     final db = await _db.database;
-    return await db.delete('detalle_factura', where: 'factura_id = ?', whereArgs: [facturaId]);
+    return await db.delete('detalle_factura',
+        where: 'factura_id = ?', whereArgs: [facturaId]);
   }
 }
 
@@ -301,21 +314,24 @@ class InventarioRepository {
 
   Future<Inventario?> getById(int id) async {
     final db = await _db.database;
-    final result = await db.query('inventario', where: 'id = ?', whereArgs: [id]);
+    final result =
+        await db.query('inventario', where: 'id = ?', whereArgs: [id]);
     if (result.isEmpty) return null;
     return Inventario.fromMap(result.first);
   }
 
   Future<Inventario?> getByCodigo(String codigo) async {
     final db = await _db.database;
-    final result = await db.query('inventario', where: 'codigo = ?', whereArgs: [codigo]);
+    final result =
+        await db.query('inventario', where: 'codigo = ?', whereArgs: [codigo]);
     if (result.isEmpty) return null;
     return Inventario.fromMap(result.first);
   }
 
   Future<int> update(Inventario item) async {
     final db = await _db.database;
-    return await db.update('inventario', item.toMap(), where: 'id = ?', whereArgs: [item.id]);
+    return await db.update('inventario', item.toMap(),
+        where: 'id = ?', whereArgs: [item.id]);
   }
 
   Future<int> delete(int id) async {
@@ -323,19 +339,20 @@ class InventarioRepository {
     return await db.delete('inventario', where: 'id = ?', whereArgs: [id]);
   }
 
-  
-  Future<void> ajustarCantidad(int id, int cantidad, String tipo, {String? referencia, String? motivo}) async {
+  Future<void> ajustarCantidad(int id, int cantidad, String tipo,
+      {String? referencia, String? motivo}) async {
     final db = await _db.database;
-    
+
     // IMPORTANTE: Obtener el item ANTES de la transacción
-    final result = await db.query('inventario', where: 'id = ?', whereArgs: [id]);
-    
+    final result =
+        await db.query('inventario', where: 'id = ?', whereArgs: [id]);
+
     if (result.isEmpty) {
       throw Exception('Item de inventario no encontrado');
     }
-    
+
     final item = Inventario.fromMap(result.first);
-    
+
     await db.transaction((txn) async {
       // Calcular nueva cantidad
       int nuevaCantidad = item.cantidadDisponible;
@@ -366,7 +383,7 @@ class InventarioRepository {
         'fecha': DateTime.now().toIso8601String(),
       });
     });
-    
+
     print('   ✅ Inventario actualizado correctamente');
   }
 
@@ -403,11 +420,13 @@ class MovimientoInventarioRepository {
 
   Future<List<MovimientoInventario>> getAll() async {
     final db = await _db.database;
-    final result = await db.query('movimientos_inventario', orderBy: 'fecha DESC');
+    final result =
+        await db.query('movimientos_inventario', orderBy: 'fecha DESC');
     return result.map((map) => MovimientoInventario.fromMap(map)).toList();
   }
 
-  Future<List<MovimientoInventario>> getByFecha(DateTime desde, DateTime hasta) async {
+  Future<List<MovimientoInventario>> getByFecha(
+      DateTime desde, DateTime hasta) async {
     final db = await _db.database;
     final result = await db.query(
       'movimientos_inventario',
@@ -442,7 +461,8 @@ class ServicioPredefinidoRepository {
 
   Future<List<ServicioPredefinido>> getAll() async {
     final db = await _db.database;
-    final result = await db.query('servicios_predefinidos', orderBy: 'nombre ASC');
+    final result =
+        await db.query('servicios_predefinidos', orderBy: 'nombre ASC');
     return result.map((map) => ServicioPredefinido.fromMap(map)).toList();
   }
 
@@ -470,31 +490,36 @@ class ServicioPredefinidoRepository {
 
   Future<ServicioPredefinido?> getById(int id) async {
     final db = await _db.database;
-    final result = await db.query('servicios_predefinidos', where: 'id = ?', whereArgs: [id]);
+    final result = await db
+        .query('servicios_predefinidos', where: 'id = ?', whereArgs: [id]);
     if (result.isEmpty) return null;
     return ServicioPredefinido.fromMap(result.first);
   }
 
   Future<ServicioPredefinido?> getByCodigo(String codigo) async {
     final db = await _db.database;
-    final result = await db.query('servicios_predefinidos', where: 'codigo = ?', whereArgs: [codigo]);
+    final result = await db.query('servicios_predefinidos',
+        where: 'codigo = ?', whereArgs: [codigo]);
     if (result.isEmpty) return null;
     return ServicioPredefinido.fromMap(result.first);
   }
 
   Future<int> update(ServicioPredefinido servicio) async {
     final db = await _db.database;
-    return await db.update('servicios_predefinidos', servicio.toMap(), where: 'id = ?', whereArgs: [servicio.id]);
+    return await db.update('servicios_predefinidos', servicio.toMap(),
+        where: 'id = ?', whereArgs: [servicio.id]);
   }
 
   Future<int> delete(int id) async {
     final db = await _db.database;
-    return await db.delete('servicios_predefinidos', where: 'id = ?', whereArgs: [id]);
+    return await db
+        .delete('servicios_predefinidos', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<List<String>> getCategorias() async {
     final db = await _db.database;
-    final result = await db.rawQuery('SELECT DISTINCT categoria FROM servicios_predefinidos WHERE categoria IS NOT NULL ORDER BY categoria');
+    final result = await db.rawQuery(
+        'SELECT DISTINCT categoria FROM servicios_predefinidos WHERE categoria IS NOT NULL ORDER BY categoria');
     return result.map((row) => row['categoria'] as String).toList();
   }
 
@@ -507,5 +532,123 @@ class ServicioPredefinidoRepository {
       orderBy: 'nombre ASC',
     );
     return result.map((map) => ServicioPredefinido.fromMap(map)).toList();
+  }
+}
+
+// ========== REPOSITORIOS PARA SISTEMA DE ORDENES ==========
+
+class MarcaRepository {
+  final DatabaseHelper _db = DatabaseHelper.instance;
+
+  Future<int> create(Marca marca) async {
+    final db = await _db.database;
+    return await db.insert('marcas', marca.toMap());
+  }
+
+  Future<List<Marca>> getAll() async {
+    final db = await _db.database;
+    final result = await db.query('marcas', orderBy: 'nombre ASC');
+    return result.map((map) => Marca.fromMap(map)).toList();
+  }
+
+  Future<Marca?> getById(int id) async {
+    final db = await _db.database;
+    final result = await db.query('marcas', where: 'id = ?', whereArgs: [id]);
+    if (result.isEmpty) return null;
+    return Marca.fromMap(result.first);
+  }
+
+  Future<List<Marca>> search(String query) async {
+    final db = await _db.database;
+    final result = await db.query('marcas',
+        where: 'nombre LIKE ?', whereArgs: ['%$query%'], orderBy: 'nombre ASC');
+    return result.map((map) => Marca.fromMap(map)).toList();
+  }
+
+  Future<int> update(Marca marca) async {
+    final db = await _db.database;
+    return await db.update('marcas', marca.toMap(),
+        where: 'id = ?', whereArgs: [marca.id]);
+  }
+
+  Future<int> delete(int id) async {
+    final db = await _db.database;
+    return await db.delete('marcas', where: 'id = ?', whereArgs: [id]);
+  }
+}
+
+class ModeloRepository {
+  final DatabaseHelper _db = DatabaseHelper.instance;
+
+  Future<int> create(Modelo modelo) async {
+    final db = await _db.database;
+    return await db.insert('modelos', modelo.toMap());
+  }
+
+  Future<List<Modelo>> getByMarcaId(int marcaId) async {
+    final db = await _db.database;
+    final result = await db.query('modelos',
+        where: 'marca_id = ?', whereArgs: [marcaId], orderBy: 'nombre ASC');
+    return result.map((map) => Modelo.fromMap(map)).toList();
+  }
+
+  Future<Modelo?> getById(int id) async {
+    final db = await _db.database;
+    final result = await db.query('modelos', where: 'id = ?', whereArgs: [id]);
+    if (result.isEmpty) return null;
+    return Modelo.fromMap(result.first);
+  }
+
+  Future<int> update(Modelo modelo) async {
+    final db = await _db.database;
+    return await db.update('modelos', modelo.toMap(),
+        where: 'id = ?', whereArgs: [modelo.id]);
+  }
+
+  Future<int> delete(int id) async {
+    final db = await _db.database;
+    return await db.delete('modelos', where: 'id = ?', whereArgs: [id]);
+  }
+}
+
+class PiezaRepository {
+  final DatabaseHelper _db = DatabaseHelper.instance;
+
+  Future<int> create(Pieza pieza) async {
+    final db = await _db.database;
+    return await db.insert('piezas', pieza.toMap());
+  }
+
+  Future<List<Pieza>> getByModeloId(int modeloId) async {
+    final db = await _db.database;
+    final result = await db.query('piezas',
+        where: 'modelo_id = ?', whereArgs: [modeloId], orderBy: 'nombre ASC');
+    return result.map((map) => Pieza.fromMap(map)).toList();
+  }
+
+  Future<List<Pieza>> search(String query, {int? modeloId}) async {
+    final db = await _db.database;
+    String whereClause = 'nombre LIKE ? OR codigo LIKE ?';
+    List<dynamic> args = ['%$query%', '%$query%'];
+
+    if (modeloId != null) {
+      whereClause = '($whereClause) AND modelo_id = ?';
+      args.add(modeloId);
+    }
+
+    final result = await db.query('piezas',
+        where: whereClause, whereArgs: args, orderBy: 'nombre ASC');
+    return result.map((map) => Pieza.fromMap(map)).toList();
+  }
+
+  Future<int> update(Pieza pieza) async {
+    final db = await _db.database;
+    return await db.update('piezas', pieza.toMap(),
+        where: 'id = ?', whereArgs: [pieza.id]);
+  }
+
+  Future<int> delete(int id) async {
+    final db = await _db.database;
+    return await db.delete('piezas', where: 'id = ?', whereArgs: [id]);
   }
 }

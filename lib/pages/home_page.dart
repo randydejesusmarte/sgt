@@ -7,7 +7,7 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     // Determinar número de columnas según el ancho
     int crossAxisCount;
     if (screenWidth < 600) {
@@ -17,10 +17,12 @@ class HomePage extends StatelessWidget {
     } else {
       crossAxisCount = 4; // Desktop
     }
-    
+
     // Calcular tamaño de iconos y texto responsivamente
-    final iconSize = screenWidth < 600 ? 36.0 : (screenWidth < 900 ? 48.0 : 56.0);
-    final fontSize = screenWidth < 600 ? 13.0 : (screenWidth < 900 ? 15.0 : 16.0);
+    final iconSize =
+        screenWidth < 600 ? 36.0 : (screenWidth < 900 ? 48.0 : 56.0);
+    final fontSize =
+        screenWidth < 600 ? 13.0 : (screenWidth < 900 ? 15.0 : 16.0);
     final cardPadding = screenWidth < 600 ? 8.0 : 12.0;
 
     return Scaffold(
@@ -122,7 +124,8 @@ class HomePage extends StatelessWidget {
                       iconSize: iconSize,
                       fontSize: fontSize,
                       cardPadding: cardPadding,
-                      onTap: () => Modular.to.navigate('/servicios-predefinidos'),
+                      onTap: () =>
+                          Modular.to.navigate('/servicios-predefinidos'),
                     ),
                     _buildMenuCard(
                       context,
@@ -133,6 +136,26 @@ class HomePage extends StatelessWidget {
                       fontSize: fontSize,
                       cardPadding: cardPadding,
                       onTap: () => Modular.to.navigate('/reportes'),
+                    ),
+                    _buildMenuCard(
+                      context,
+                      title: 'Conf. Marcas',
+                      icon: Icons.car_repair,
+                      color: Colors.brown,
+                      iconSize: iconSize,
+                      fontSize: fontSize,
+                      cardPadding: cardPadding,
+                      onTap: () => Modular.to.navigate('/configuracion/marcas'),
+                    ),
+                    _buildMenuCard(
+                      context,
+                      title: 'Catálogo Piezas',
+                      icon: Icons.list_alt,
+                      color: Colors.blueGrey,
+                      iconSize: iconSize,
+                      fontSize: fontSize,
+                      cardPadding: cardPadding,
+                      onTap: () => Modular.to.navigate('/inventario/piezas'),
                     ),
                   ],
                 ),
