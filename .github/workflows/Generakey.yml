@@ -1,0 +1,35 @@
+name: Generar keystore (uso único)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configurar Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Generar keystore
+        run: |
+          keytool -genkey -v -keystore upload-keystore.jks \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -alias upload \
+            -storepass "CambiaEstaPassword123" \
+            -keypass "CambiaEstaPassword123" \
+            -dname "CN=Mi App, OU=Dev, O=MiEmpresa, L=SantoDomingo, ST=DN, C=DO"
+
+      - name: Convertir a base64
+        run: base64 -w 0 upload-keystore.jks > keystore_base64.txt
+
+      - name: Subir como artefacto
+        uses: actions/upload-artifact@v7
+        with:
+          name: keystore-generado
+          path: |
+            upload-keystore.jks
+            keystore_base64.txt
+          retention-days: 1
