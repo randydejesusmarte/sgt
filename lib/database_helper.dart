@@ -19,9 +19,12 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 5, // INCREMENTAR VERSIÓN PARA NUEVA TABLA
+      version: 6,
+      onConfigure: (db) async {
+        await db.execute('PRAGMA foreign_keys = ON');
+      },
       onCreate: _createDB,
-      onUpgrade: _onUpgrade, // AGREGAR MIGRACIÓN
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -75,6 +78,7 @@ CREATE TABLE empleados (
   nombre $textType,
   telefono $textType,
   especialidad TEXT,
+  fecha_nacimiento TEXT,
   activo $intType,
   created_at $textType
 )
@@ -312,6 +316,10 @@ CREATE TABLE piezas (
       // Optional: Migrate data from brands_models if needed, but since it was just added in v4 and likely empty/test data, we might skip complex data migration for simplicity unless crucial.
       // Dropping table marcas_modelos might be cleaner if we want to get rid of it.
       // await db.execute('DROP TABLE IF EXISTS marcas_modelos');
+    }
+
+    if (oldVersion < 6) {
+      await db.execute('ALTER TABLE empleados ADD COLUMN fecha_nacimiento TEXT');
     }
   }
 

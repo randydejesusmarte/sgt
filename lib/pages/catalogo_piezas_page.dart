@@ -13,9 +13,9 @@ class CatalogoPiezasPage extends StatefulWidget {
 }
 
 class _CatalogoPiezasPageState extends State<CatalogoPiezasPage> {
-  final _marcaBloc = Modular.get<MarcaBloc>();
-  final _modeloBloc = Modular.get<ModeloBloc>();
-  final _piezaBloc = Modular.get<PiezaBloc>();
+  final _marcaBloc = inject<MarcaBloc>();
+  final _modeloBloc = inject<ModeloBloc>();
+  final _piezaBloc = inject<PiezaBloc>();
 
   Marca? _selectedMarca;
   Modelo? _selectedModelo;
@@ -116,7 +116,7 @@ class _CatalogoPiezasPageState extends State<CatalogoPiezasPage> {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Modular.to.navigate('/'),
+          onPressed: () => context.navigate('/'),
         ),
       ),
       body: Column(

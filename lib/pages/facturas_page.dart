@@ -14,7 +14,7 @@ class FacturasPage extends StatefulWidget {
 }
 
 class _FacturasPageState extends State<FacturasPage> {
-  final FacturaBloc _bloc = Modular.get<FacturaBloc>();
+  final FacturaBloc _bloc = inject<FacturaBloc>();
   String _filtroEstado = 'todas';
 
   @override
@@ -38,10 +38,10 @@ class _FacturasPageState extends State<FacturasPage> {
 
   Future<void> _imprimirFactura(dynamic factura) async {
     try {
-      final clienteRepo = Modular.get<ClienteRepository>();
-      final detalleRepo = Modular.get<DetalleFacturaRepository>();
-      final servicioRepo = Modular.get<ServicioRepository>();
-      final vehiculoRepo = Modular.get<VehiculoRepository>();
+      final clienteRepo = inject<ClienteRepository>();
+      final detalleRepo = inject<DetalleFacturaRepository>();
+      final servicioRepo = inject<ServicioRepository>();
+      final vehiculoRepo = inject<VehiculoRepository>();
 
       final cliente = await clienteRepo.getById(factura.clienteId);
       final detalles = await detalleRepo.getByFacturaId(factura.id);
@@ -100,7 +100,7 @@ class _FacturasPageState extends State<FacturasPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Modular.to.navigate('/'),
+          onPressed: () => context.navigate('/'),
         ),
         title: const Text('Facturas'),
         backgroundColor: Colors.purple.shade700,
@@ -385,7 +385,7 @@ class _FacturasPageState extends State<FacturasPage> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Modular.to.navigate('/facturas/nueva'),
+        onPressed: () => context.navigate('/facturas/nueva'),
         backgroundColor: Colors.purple.shade700,
         icon: const Icon(Icons.add),
         label: isMobile ? const SizedBox.shrink() : const Text('Nueva Factura'),

@@ -17,9 +17,9 @@ class ClienteDetallePage extends StatefulWidget {
 }
 
 class _ClienteDetallePageState extends State<ClienteDetallePage> {
-  final ClienteRepository _clienteRepo = Modular.get<ClienteRepository>();
-  final VehiculoBloc _vehiculoBloc = Modular.get<VehiculoBloc>();
-  final FacturaBloc _facturaBloc = Modular.get<FacturaBloc>();
+  final ClienteRepository _clienteRepo = inject<ClienteRepository>();
+  final VehiculoBloc _vehiculoBloc = inject<VehiculoBloc>();
+  final FacturaBloc _facturaBloc = inject<FacturaBloc>();
 
   Cliente? _cliente;
   bool _isLoading = true;
@@ -52,7 +52,7 @@ class _ClienteDetallePageState extends State<ClienteDetallePage> {
         appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Modular.to.navigate('/clientes'),
+          onPressed: () => context.navigate('/clientes'),
         ),
           title: Text(_cliente!.nombre),
           backgroundColor: Colors.blue.shade700,

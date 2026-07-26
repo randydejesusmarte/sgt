@@ -16,11 +16,12 @@ class ServiciosPage extends StatefulWidget {
 
 class _ServiciosPageState extends State<ServiciosPage> {
   late final ServicioBloc _servicioBloc;
+  String _filtroEstado = 'todos';
 
   @override
   void initState() {
     super.initState();
-    _servicioBloc = Modular.get<ServicioBloc>();
+    _servicioBloc = inject<ServicioBloc>();
     _servicioBloc.add(LoadServicios());
   }
 
@@ -33,7 +34,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Modular.to.navigate('/'),
+          onPressed: () => context.navigate('/'),
         ),
         title: const Text('Servicios'),
         backgroundColor: Colors.indigo.shade700,
@@ -111,29 +112,71 @@ class _ServiciosPageState extends State<ServiciosPage> {
                   );
                 }
 
-                return ListView.builder(
-                  itemCount: state.servicios.length,
-                  padding: EdgeInsets.all(screenWidth * 0.03),
-                  physics: const BouncingScrollPhysics(),
-                  itemBuilder: (context, index) {
-                    final servicio = state.servicios[index];
-                    final vehiculo = state.vehiculos[servicio.vehiculoId];
-                    final cliente = vehiculo != null
-                        ? state.clientes[vehiculo.clienteId]
-                        : null;
-                    final empleado = servicio.empleadoId != null
-                        ? state.empleados[servicio.empleadoId]
-                        : null;
+                final serviciosFiltrados = _filtroEstado == 'todos'
+                    ? state.servicios
+                    : state.servicios
+                        .where((s) =>
+                            s.estado.toLowerCase() ==
+                            _filtroEstado.toLowerCase())
+                        .toList();
 
-                    return _buildServicioCard(
-                      context,
-                      servicio,
-                      cliente,
-                      vehiculo,
-                      empleado,
-                      isMobile,
-                    );
-                  },
+                return Column(
+                  children: [
+                    // Barra de Filtros por Estado
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      child: Row(
+                        children: [
+                          _buildFilterChip('Todos', 'todos'),
+                          const SizedBox(width: 8),
+                          _buildFilterChip('Pendiente', 'pendiente'),
+                          const SizedBox(width: 8),
+                          _buildFilterChip('En Proceso', 'en_proceso'),
+                          const SizedBox(width: 8),
+                          _buildFilterChip('Completado', 'completado'),
+                          const SizedBox(width: 8),
+                          _buildFilterChip('Cancelado', 'cancelado'),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: serviciosFiltrados.isEmpty
+                          ? Center(
+                              child: Text(
+                                'No hay servicios en este estado',
+                                style: TextStyle(
+                                    color: Colors.grey.shade600, fontSize: 16),
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: serviciosFiltrados.length,
+                              padding: EdgeInsets.all(screenWidth * 0.03),
+                              physics: const BouncingScrollPhysics(),
+                              itemBuilder: (context, index) {
+                                final servicio = serviciosFiltrados[index];
+                                final vehiculo =
+                                    state.vehiculos[servicio.vehiculoId];
+                                final cliente = vehiculo != null
+                                    ? state.clientes[vehiculo.clienteId]
+                                    : null;
+                                final empleado = servicio.empleadoId != null
+                                    ? state.empleados[servicio.empleadoId]
+                                    : null;
+
+                                return _buildServicioCard(
+                                  context,
+                                  servicio,
+                                  cliente,
+                                  vehiculo,
+                                  empleado,
+                                  isMobile,
+                                );
+                              },
+                            ),
+                    ),
+                  ],
                 );
               } else if (state is ServicioError) {
                 return Center(
@@ -532,6 +575,15 @@ class _ServiciosPageState extends State<ServiciosPage> {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.receipt_long, color: Colors.purple),
+              title: const Text('Facturar Servicio (1 Clic)'),
+              subtitle: const Text('Pre-carga cliente, vehículo y monto'),
+              onTap: () {
+                Navigator.pop(context);
+                context.navigate('/facturas/nueva/${servicio.id}');
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.edit, color: Colors.orange),
               title: const Text('Editar Estado'),
               onTap: () {
@@ -550,6 +602,28 @@ class _ServiciosPageState extends State<ServiciosPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, String value) {
+    final isSelected = _filtroEstado == value;
+    return FilterChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          color: isSelected ? Colors.white : Colors.indigo.shade900,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      selected: isSelected,
+      selectedColor: Colors.indigo.shade700,
+      backgroundColor: Colors.white,
+      checkmarkColor: Colors.white,
+      onSelected: (selected) {
+        setState(() {
+          _filtroEstado = value;
+        });
+      },
     );
   }
 
@@ -673,42 +747,29 @@ class _ServiciosPageState extends State<ServiciosPage> {
   }
 
   void _showAddServicioDialog() async {
-    final clientes = await Modular.get<ClienteRepository>().getAll();
-    if (clientes.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.warning, color: Colors.white),
-              SizedBox(width: 12),
-              Expanded(
-                child: Text('Primero debes registrar un cliente y vehículo'),
-              ),
-            ],
-          ),
-          backgroundColor: Colors.orange.shade600,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          margin: const EdgeInsets.all(16),
-        ),
-      );
-      return;
-    }
-
-    // Cargar servicios predefinidos
+    final clientes = await inject<ClienteRepository>().getAll();
     final serviciosPredefinidos =
-        await Modular.get<ServicioPredefinidoRepository>().getActivos();
+        await inject<ServicioPredefinidoRepository>().getActivos();
+    final empleados = await inject<EmpleadoRepository>().getActivos();
+
+    bool esNuevoCliente = clientes.isEmpty;
 
     Cliente? clienteSeleccionado;
     Vehiculo? vehiculoSeleccionado;
     Empleado? empleadoSeleccionado;
     ServicioPredefinido? servicioPredefinidoSeleccionado;
     List<Vehiculo> vehiculos = [];
-    final empleados = await Modular.get<EmpleadoRepository>().getActivos();
 
+    // Controladores para nuevo cliente y vehículo
+    final nombreClienteController = TextEditingController();
+    final telefonoClienteController = TextEditingController();
+    final marcaVehiculoController = TextEditingController();
+    final modeloVehiculoController = TextEditingController();
+    final placaVehiculoController = TextEditingController();
+    final anioVehiculoController =
+        TextEditingController(text: DateTime.now().year.toString());
+
+    // Controladores para servicio
     final descripcionController = TextEditingController();
     final costoController = TextEditingController();
     final notasController = TextEditingController();
@@ -754,49 +815,162 @@ class _ServiciosPageState extends State<ServiciosPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildDropdownField<Cliente?>(
-                    value: clienteSeleccionado,
-                    label: 'Cliente',
-                    icon: Icons.person,
-                    items: clientes.map((cliente) {
-                      return DropdownMenuItem(
-                        value: cliente,
-                        child: Text(cliente.nombre),
-                      );
-                    }).toList(),
-                    onChanged: (value) async {
-                      setDialogState(() {
-                        clienteSeleccionado = value;
-                        vehiculoSeleccionado = null;
-                      });
-                      if (value != null) {
-                        vehiculos = await Modular.get<VehiculoRepository>()
-                            .getByClienteId(value.id!);
-                        setDialogState(() {});
-                      }
-                    },
-                    validator: (v) =>
-                        v == null ? 'Selecciona un cliente' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildDropdownField<Vehiculo?>(
-                    value: vehiculoSeleccionado,
-                    label: 'Vehículo',
-                    icon: Icons.directions_car,
-                    items: vehiculos.map((vehiculo) {
-                      return DropdownMenuItem(
-                        value: vehiculo,
-                        child: Text(
-                            '${vehiculo.marca} ${vehiculo.modelo} - ${vehiculo.placa}'),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setDialogState(() => vehiculoSeleccionado = value);
-                    },
-                    validator: (v) =>
-                        v == null ? 'Selecciona un vehículo' : null,
-                  ),
-                  const SizedBox(height: 16),
+                  // Selector de modo: Cliente Existente o Nuevo Cliente + Auto
+                  if (clientes.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: SegmentedButton<bool>(
+                        segments: const [
+                          ButtonSegment<bool>(
+                            value: false,
+                            label: Text('Cliente Existente'),
+                            icon: Icon(Icons.person_search, size: 18),
+                          ),
+                          ButtonSegment<bool>(
+                            value: true,
+                            label: Text('+ Nuevo Cliente / Auto'),
+                            icon: Icon(Icons.person_add, size: 18),
+                          ),
+                        ],
+                        selected: {esNuevoCliente},
+                        onSelectionChanged: (newSelection) {
+                          setDialogState(() {
+                            esNuevoCliente = newSelection.first;
+                          });
+                        },
+                      ),
+                    ),
+
+                  if (esNuevoCliente) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline,
+                              color: Colors.blue.shade800, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Se registrará el Cliente, Vehículo y Servicio en 1 solo paso.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.blue.shade900,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    _buildTextField(
+                      controller: nombreClienteController,
+                      label: 'Nombre del Cliente *',
+                      icon: Icons.person,
+                      validator: (v) =>
+                          v?.trim().isEmpty ?? true ? 'Ingresa el nombre' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildTextField(
+                      controller: telefonoClienteController,
+                      label: 'Teléfono del Cliente *',
+                      icon: Icons.phone,
+                      keyboardType: TextInputType.phone,
+                      validator: (v) => v?.trim().isEmpty ?? true
+                          ? 'Ingresa el teléfono'
+                          : null,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildTextField(
+                      controller: marcaVehiculoController,
+                      label: 'Marca del Auto (ej: Toyota) *',
+                      icon: Icons.car_repair,
+                      validator: (v) =>
+                          v?.trim().isEmpty ?? true ? 'Ingresa la marca' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildTextField(
+                      controller: modeloVehiculoController,
+                      label: 'Modelo del Auto (ej: Corolla) *',
+                      icon: Icons.directions_car,
+                      validator: (v) =>
+                          v?.trim().isEmpty ?? true ? 'Ingresa el modelo' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildTextField(
+                            controller: placaVehiculoController,
+                            label: 'Placa *',
+                            icon: Icons.pin,
+                            validator: (v) => v?.trim().isEmpty ?? true
+                                ? 'Ingresa placa'
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildTextField(
+                            controller: anioVehiculoController,
+                            label: 'Año',
+                            icon: Icons.calendar_today,
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ] else ...[
+                    _buildDropdownField<Cliente?>(
+                      value: clienteSeleccionado,
+                      label: 'Cliente',
+                      icon: Icons.person,
+                      items: clientes.map((cliente) {
+                        return DropdownMenuItem(
+                          value: cliente,
+                          child: Text(cliente.nombre),
+                        );
+                      }).toList(),
+                      onChanged: (value) async {
+                        setDialogState(() {
+                          clienteSeleccionado = value;
+                          vehiculoSeleccionado = null;
+                        });
+                        if (value != null) {
+                          vehiculos = await inject<VehiculoRepository>()
+                              .getByClienteId(value.id!);
+                          setDialogState(() {});
+                        }
+                      },
+                      validator: (v) =>
+                          v == null ? 'Selecciona un cliente' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildDropdownField<Vehiculo?>(
+                      value: vehiculoSeleccionado,
+                      label: 'Vehículo',
+                      icon: Icons.directions_car,
+                      items: vehiculos.map((vehiculo) {
+                        return DropdownMenuItem(
+                          value: vehiculo,
+                          child: Text(
+                              '${vehiculo.marca} ${vehiculo.modelo} - ${vehiculo.placa}'),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setDialogState(() => vehiculoSeleccionado = value);
+                      },
+                      validator: (v) =>
+                          v == null ? 'Selecciona un vehículo' : null,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
 
                   // Switch para elegir entre servicio predefinido o personalizado
                   if (serviciosPredefinidos.isNotEmpty)
@@ -976,11 +1150,35 @@ class _ServiciosPageState extends State<ServiciosPage> {
               ),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 if (formKey.currentState!.validate()) {
+                  int vehiculoId;
+
+                  if (esNuevoCliente) {
+                    final clienteRepo = inject<ClienteRepository>();
+                    final vehiculoRepo = inject<VehiculoRepository>();
+
+                    final clienteId = await clienteRepo.create(Cliente(
+                      nombre: nombreClienteController.text.trim(),
+                      telefono: telefonoClienteController.text.trim(),
+                      createdAt: DateTime.now(),
+                    ));
+
+                    vehiculoId = await vehiculoRepo.create(Vehiculo(
+                      clienteId: clienteId,
+                      marca: marcaVehiculoController.text.trim(),
+                      modelo: modeloVehiculoController.text.trim(),
+                      anio: int.tryParse(anioVehiculoController.text) ??
+                          DateTime.now().year,
+                      placa: placaVehiculoController.text.trim().toUpperCase(),
+                    ));
+                  } else {
+                    vehiculoId = vehiculoSeleccionado!.id!;
+                  }
+
                   final servicio = Servicio(
                     id: null,
-                    vehiculoId: vehiculoSeleccionado!.id!,
+                    vehiculoId: vehiculoId,
                     empleadoId: empleadoSeleccionado?.id,
                     descripcion: descripcionController.text,
                     costo: double.parse(costoController.text),
@@ -990,7 +1188,9 @@ class _ServiciosPageState extends State<ServiciosPage> {
                         ? null
                         : notasController.text,
                   );
+
                   _servicioBloc.add(CreateServicio(servicio));
+                  if (!context.mounted) return;
                   Navigator.pop(context);
 
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -999,7 +1199,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
                         children: [
                           Icon(Icons.check_circle, color: Colors.white),
                           SizedBox(width: 12),
-                          Text('Servicio creado exitosamente'),
+                          Text('Servicio registrado exitosamente'),
                         ],
                       ),
                       backgroundColor: Colors.green.shade600,

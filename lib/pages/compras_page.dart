@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart' show AlertDialog, Alignment, AppBar, BorderRadius, BouncingScrollPhysics, BoxDecoration, BoxShadow, BoxShape, BuildContext, Card, Center, CircularProgressIndicator, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, ElevatedButton, Expanded, FloatingActionButton, FontWeight, Form, FormState, GlobalKey, Icon, IconButton, Icons, InkWell, InputDecoration, LinearGradient, ListView, MainAxisAlignment, MainAxisSize, MediaQuery, Navigator, Offset, OutlineInputBorder, Padding, RoundedRectangleBorder, Row, SafeArea, Scaffold, SingleChildScrollView, SizedBox, State, StatefulWidget, Text, TextAlign, TextButton, TextEditingController, TextFormField, TextInputType, TextStyle, Widget, showDialog;
 import 'package:flutter_bloc/flutter_bloc.dart' show BlocBuilder;
-import 'package:flutter_modular/flutter_modular.dart' show Modular;
+import 'package:flutter_modular/flutter_modular.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:taller_autos/compra_bloc.dart' show AddCompra, CompraBloc, CompraError, CompraLoaded, CompraLoading, CompraState, LoadCompras;
 import 'package:taller_autos/models.dart' show Compra;
@@ -13,7 +13,7 @@ class ComprasPage extends StatefulWidget {
 }
 
 class _ComprasPageState extends State<ComprasPage> {
-  final CompraBloc _bloc = Modular.get<CompraBloc>();
+  final CompraBloc _bloc = inject<CompraBloc>();
 
   @override
   void initState() {
@@ -30,7 +30,7 @@ class _ComprasPageState extends State<ComprasPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Modular.to.navigate('/'),
+          onPressed: () => context.navigate('/'),
         ),
         title: const Text('Historial de Compras'),
         backgroundColor: Colors.green.shade700,
@@ -41,7 +41,7 @@ class _ComprasPageState extends State<ComprasPage> {
           IconButton(
             icon: const Icon(Icons.assignment_add),
             tooltip: 'Crear Orden de Compra',
-            onPressed: () => Modular.to.pushNamed('/orden-compra'),
+            onPressed: () => context.pushNamed('/orden-compra'),
           ),
         ],
       ),

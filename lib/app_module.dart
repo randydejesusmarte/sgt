@@ -20,82 +20,81 @@ import 'pages/servicios_page.dart';
 import 'pages/inventario_page.dart';
 import 'pages/servicios_predefinidos_page.dart';
 import 'pages/orden_compra_page.dart';
-import 'pages/config_marcas_page.dart'; // New import
-import 'pages/catalogo_piezas_page.dart'; // New import
-import 'marca_bloc.dart'; // New import
-import 'modelo_bloc.dart'; // New import
-import 'pieza_bloc.dart'; // New import
+import 'pages/config_marcas_page.dart';
+import 'pages/catalogo_piezas_page.dart';
+import 'marca_bloc.dart';
+import 'modelo_bloc.dart';
+import 'pieza_bloc.dart';
 
-class AppModule extends Module {
-  @override
-  void binds(i) {
+final appModule = createModule(
+  register: (c) {
     // Repositories
-    i.addSingleton(ClienteRepository.new);
-    i.addSingleton(VehiculoRepository.new);
-    i.addSingleton(ServicioRepository.new);
-    i.addSingleton(CompraRepository.new);
-    i.addSingleton(FacturaRepository.new);
-    i.addSingleton(DetalleFacturaRepository.new);
-    i.addSingleton(EmpleadoRepository.new);
+    c.addSingleton(ClienteRepository.new);
+    c.addSingleton(VehiculoRepository.new);
+    c.addSingleton(ServicioRepository.new);
+    c.addSingleton(CompraRepository.new);
+    c.addSingleton(FacturaRepository.new);
+    c.addSingleton(DetalleFacturaRepository.new);
+    c.addSingleton(EmpleadoRepository.new);
 
     // REPOSITORIOS DE INVENTARIO
-    i.addSingleton(InventarioRepository.new);
-    i.addSingleton(MovimientoInventarioRepository.new);
+    c.addSingleton(InventarioRepository.new);
+    c.addSingleton(MovimientoInventarioRepository.new);
 
     // REPOSITORIO DE SERVICIOS PREDEFINIDOS
-    i.addSingleton(ServicioPredefinidoRepository.new);
-    i.addSingleton(MarcaRepository.new); // Replaced MarcaModeloRepository
-    i.addSingleton(ModeloRepository.new); // Added
-    i.addSingleton(PiezaRepository.new); // Added
+    c.addSingleton(ServicioPredefinidoRepository.new);
+    c.addSingleton(MarcaRepository.new);
+    c.addSingleton(ModeloRepository.new);
+    c.addSingleton(PiezaRepository.new);
 
     // BLoCs
-    i.addLazySingleton(() => ClienteBloc(i.get<ClienteRepository>()));
-    i.addLazySingleton(() => CompraBloc(i.get<CompraRepository>()));
-    i.addLazySingleton(() => FacturaBloc(
-        i.get<FacturaRepository>(), i.get<DetalleFacturaRepository>()));
-    i.addLazySingleton(() => VehiculoBloc(i.get<VehiculoRepository>()));
-    i.addLazySingleton(() => EmpleadoBloc(i.get<EmpleadoRepository>()));
-    i.addLazySingleton(() => ServicioBloc(
-          servicioRepo: i.get<ServicioRepository>(),
-          vehiculoRepo: i.get<VehiculoRepository>(),
-          clienteRepo: i.get<ClienteRepository>(),
-          empleadoRepo: i.get<EmpleadoRepository>(),
+    c.addLazySingleton(() => ClienteBloc(inject<ClienteRepository>()));
+    c.addLazySingleton(() => CompraBloc(inject<CompraRepository>()));
+    c.addLazySingleton(() => FacturaBloc(
+        inject<FacturaRepository>(), inject<DetalleFacturaRepository>()));
+    c.addLazySingleton(() => VehiculoBloc(inject<VehiculoRepository>()));
+    c.addLazySingleton(() => EmpleadoBloc(inject<EmpleadoRepository>()));
+    c.addLazySingleton(() => ServicioBloc(
+          servicioRepo: inject<ServicioRepository>(),
+          vehiculoRepo: inject<VehiculoRepository>(),
+          clienteRepo: inject<ClienteRepository>(),
+          empleadoRepo: inject<EmpleadoRepository>(),
         ));
-    i.addLazySingleton(
-        () => ServicioPredefinidoBloc(i.get<ServicioPredefinidoRepository>()));
-    // New BLoCs
-    i.addLazySingleton(() => MarcaBloc(i.get<MarcaRepository>()));
-    i.addLazySingleton(() => ModeloBloc(i.get<ModeloRepository>()));
-    i.addLazySingleton(() => PiezaBloc(i.get<PiezaRepository>()));
-  }
+    c.addLazySingleton(
+        () => ServicioPredefinidoBloc(inject<ServicioPredefinidoRepository>()));
+    c.addLazySingleton(() => MarcaBloc(inject<MarcaRepository>()));
+    c.addLazySingleton(() => ModeloBloc(inject<ModeloRepository>()));
+    c.addLazySingleton(() => PiezaBloc(inject<PiezaRepository>()));
 
-  @override
-  void routes(r) {
-    r.child('/', child: (context) => const HomePage());
-    r.child('/clientes', child: (context) => const ClientesPage());
-    r.child('/clientes/nuevo', child: (context) => const ClienteFormPage());
-    r.child('/clientes/editar/:id',
-        child: (context) => ClienteFormPage(
-              clienteId: int.parse(r.args.params['id'] ?? '0'),
+    // Routes
+    c.route('/', child: (context, state) => const HomePage());
+    c.route('/clientes', child: (context, state) => const ClientesPage());
+    c.route('/clientes/nuevo', child: (context, state) => const ClienteFormPage());
+    c.route('/clientes/editar/:id',
+        child: (context, state) => ClienteFormPage(
+              clienteId: int.parse(state.params['id'] ?? '0'),
             ));
-    r.child('/clientes/detalle/:id',
-        child: (context) => ClienteDetallePage(
-              clienteId: int.parse(r.args.params['id'] ?? '0'),
+    c.route('/clientes/detalle/:id',
+        child: (context, state) => ClienteDetallePage(
+              clienteId: int.parse(state.params['id'] ?? '0'),
             ));
-    r.child('/compras', child: (context) => const ComprasPage());
-    r.child('/facturas', child: (context) => const FacturasPage());
-    r.child('/facturas/nueva', child: (context) => const FacturaFormPage());
-    r.child('/reportes', child: (context) => const ReportesPage());
-    r.child('/empleados', child: (context) => const EmpleadosPage());
-    r.child('/servicios', child: (context) => const ServiciosPage());
-    r.child('/inventario', child: (context) => const InventarioPage());
-    r.child('/servicios-predefinidos',
-        child: (context) => const ServiciosPredefinidosPage());
-    r.child('/orden-compra', child: (context) => const OrdenCompraPage());
-    // Rutas nuevas
-    r.child('/configuracion/marcas',
-        child: (context) => const ConfigMarcasPage());
-    r.child('/inventario/piezas',
-        child: (context) => const CatalogoPiezasPage());
-  }
-}
+    c.route('/compras', child: (context, state) => const ComprasPage());
+    c.route('/facturas', child: (context, state) => const FacturasPage());
+    c.route('/facturas/nueva', child: (context, state) => const FacturaFormPage());
+    c.route('/facturas/nueva/:servicioId',
+        child: (context, state) => FacturaFormPage(
+              servicioId: int.tryParse(state.params['servicioId'] ?? ''),
+            ));
+    c.route('/reportes', child: (context, state) => const ReportesPage());
+    c.route('/empleados', child: (context, state) => const EmpleadosPage());
+    c.route('/servicios', child: (context, state) => const ServiciosPage());
+    c.route('/inventario', child: (context, state) => const InventarioPage());
+    c.route('/servicios-predefinidos',
+        child: (context, state) => const ServiciosPredefinidosPage());
+    c.route('/orden-compra', child: (context, state) => const OrdenCompraPage());
+    c.route('/configuracion/marcas',
+        child: (context, state) => const ConfigMarcasPage());
+    c.route('/inventario/piezas',
+        child: (context, state) => const CatalogoPiezasPage());
+  },
+);

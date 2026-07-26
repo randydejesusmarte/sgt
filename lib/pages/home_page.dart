@@ -64,7 +64,7 @@ class HomePage extends StatelessWidget {
                       iconSize: iconSize,
                       fontSize: fontSize,
                       cardPadding: cardPadding,
-                      onTap: () => Modular.to.navigate('/clientes'),
+                      onTap: () => context.navigate('/clientes'),
                     ),
                     _buildMenuCard(
                       context,
@@ -74,7 +74,7 @@ class HomePage extends StatelessWidget {
                       iconSize: iconSize,
                       fontSize: fontSize,
                       cardPadding: cardPadding,
-                      onTap: () => Modular.to.navigate('/servicios'),
+                      onTap: () => context.navigate('/servicios'),
                     ),
                     _buildMenuCard(
                       context,
@@ -84,7 +84,7 @@ class HomePage extends StatelessWidget {
                       iconSize: iconSize,
                       fontSize: fontSize,
                       cardPadding: cardPadding,
-                      onTap: () => Modular.to.navigate('/empleados'),
+                      onTap: () => context.navigate('/empleados'),
                     ),
                     _buildMenuCard(
                       context,
@@ -94,7 +94,7 @@ class HomePage extends StatelessWidget {
                       iconSize: iconSize,
                       fontSize: fontSize,
                       cardPadding: cardPadding,
-                      onTap: () => Modular.to.navigate('/facturas'),
+                      onTap: () => context.navigate('/facturas'),
                     ),
                     _buildMenuCard(
                       context,
@@ -104,7 +104,7 @@ class HomePage extends StatelessWidget {
                       iconSize: iconSize,
                       fontSize: fontSize,
                       cardPadding: cardPadding,
-                      onTap: () => Modular.to.navigate('/compras'),
+                      onTap: () => context.navigate('/compras'),
                     ),
                     _buildMenuCard(
                       context,
@@ -114,7 +114,7 @@ class HomePage extends StatelessWidget {
                       iconSize: iconSize,
                       fontSize: fontSize,
                       cardPadding: cardPadding,
-                      onTap: () => Modular.to.navigate('/inventario'),
+                      onTap: () => context.navigate('/inventario'),
                     ),
                     _buildMenuCard(
                       context,
@@ -124,8 +124,7 @@ class HomePage extends StatelessWidget {
                       iconSize: iconSize,
                       fontSize: fontSize,
                       cardPadding: cardPadding,
-                      onTap: () =>
-                          Modular.to.navigate('/servicios-predefinidos'),
+                      onTap: () => context.navigate('/servicios-predefinidos'),
                     ),
                     _buildMenuCard(
                       context,
@@ -135,7 +134,7 @@ class HomePage extends StatelessWidget {
                       iconSize: iconSize,
                       fontSize: fontSize,
                       cardPadding: cardPadding,
-                      onTap: () => Modular.to.navigate('/reportes'),
+                      onTap: () => context.navigate('/reportes'),
                     ),
                     _buildMenuCard(
                       context,
@@ -145,7 +144,7 @@ class HomePage extends StatelessWidget {
                       iconSize: iconSize,
                       fontSize: fontSize,
                       cardPadding: cardPadding,
-                      onTap: () => Modular.to.navigate('/configuracion/marcas'),
+                      onTap: () => context.navigate('/configuracion/marcas'),
                     ),
                     _buildMenuCard(
                       context,
@@ -155,7 +154,7 @@ class HomePage extends StatelessWidget {
                       iconSize: iconSize,
                       fontSize: fontSize,
                       cardPadding: cardPadding,
-                      onTap: () => Modular.to.navigate('/inventario/piezas'),
+                      onTap: () => context.navigate('/inventario/piezas'),
                     ),
                   ],
                 ),

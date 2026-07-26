@@ -17,7 +17,7 @@ class _ServiciosPredefinidosPageState extends State<ServiciosPredefinidosPage> {
   @override
   void initState() {
     super.initState();
-    _bloc = Modular.get<ServicioPredefinidoBloc>();
+    _bloc = inject<ServicioPredefinidoBloc>();
     _bloc.add(LoadServiciosPredefinidos());
   }
 
@@ -30,7 +30,7 @@ class _ServiciosPredefinidosPageState extends State<ServiciosPredefinidosPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Modular.to.navigate('/'),
+          onPressed: () => context.navigate('/'),
         ),
         title: const Text('Servicios Predefinidos'),
         backgroundColor: Colors.deepPurple.shade700,

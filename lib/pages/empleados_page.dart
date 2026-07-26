@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import '../models.dart';
 import '../empleado_bloc.dart';
 
@@ -17,7 +18,7 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
   @override
   void initState() {
     super.initState();
-    _empleadoBloc = Modular.get<EmpleadoBloc>();
+    _empleadoBloc = inject<EmpleadoBloc>();
     _empleadoBloc.add(LoadEmpleados());
   }
 
@@ -30,7 +31,7 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Modular.to.navigate('/'),
+          onPressed: () => context.navigate('/'),
         ),
         title: const Text('Empleados'),
         backgroundColor: Colors.teal.shade700,
@@ -140,7 +141,7 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddEmpleadoDialog(),
+        onPressed: () => _showEmpleadoFormDialog(),
         backgroundColor: Colors.teal.shade700,
         icon: const Icon(Icons.add),
         label:
@@ -164,6 +165,7 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
         shadowColor: Colors.teal.withValues(alpha: 0.2),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
+          onTap: () => _showEmpleadoFormDialog(empleado: empleado),
           splashColor: Colors.teal.withValues(alpha: 0.1),
           highlightColor: Colors.teal.withValues(alpha: 0.05),
           child: Container(
@@ -208,7 +210,9 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                     ),
                     child: Center(
                       child: Text(
-                        empleado.nombre[0].toUpperCase(),
+                        empleado.nombre.isNotEmpty
+                            ? empleado.nombre[0].toUpperCase()
+                            : 'E',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: isMobile ? 24 : 28,
@@ -248,7 +252,8 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                             ),
                           ],
                         ),
-                        if (empleado.especialidad != null) ...[
+                        if (empleado.especialidad != null &&
+                            empleado.especialidad!.isNotEmpty) ...[
                           const SizedBox(height: 2),
                           Row(
                             children: [
@@ -263,6 +268,27 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                                 style: TextStyle(
                                   fontSize: isMobile ? 14 : 15,
                                   color: Colors.grey.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                        if (empleado.fechaNacimiento != null) ...[
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.cake,
+                                size: isMobile ? 14 : 16,
+                                color: Colors.pink.shade400,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Cumpleaños: ${DateFormat('dd/MM/yyyy').format(empleado.fechaNacimiento!)}',
+                                style: TextStyle(
+                                  fontSize: isMobile ? 13 : 14,
+                                  color: Colors.grey.shade700,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
@@ -301,6 +327,16 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit, color: Colors.blue),
+                            SizedBox(width: 12),
+                            Text('Editar Datos'),
+                          ],
+                        ),
+                      ),
                       PopupMenuItem(
                         value: 'toggle',
                         child: Row(
@@ -331,14 +367,11 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                       ),
                     ],
                     onSelected: (value) {
-                      if (value == 'toggle') {
-                        final updated = Empleado(
-                          id: empleado.id,
-                          nombre: empleado.nombre,
-                          telefono: empleado.telefono,
-                          especialidad: empleado.especialidad,
+                      if (value == 'edit') {
+                        _showEmpleadoFormDialog(empleado: empleado);
+                      } else if (value == 'toggle') {
+                        final updated = empleado.copyWith(
                           activo: !empleado.activo,
-                          createdAt: empleado.createdAt,
                         );
                         _empleadoBloc.add(UpdateEmpleado(updated));
                       } else if (value == 'delete') {
@@ -355,120 +388,221 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
     );
   }
 
-  void _showAddEmpleadoDialog() {
-    final nombreController = TextEditingController();
-    final telefonoController = TextEditingController();
-    final especialidadController = TextEditingController();
+  void _showEmpleadoFormDialog({Empleado? empleado}) {
+    final isEditing = empleado != null;
+    final nombreController = TextEditingController(text: empleado?.nombre ?? '');
+    final telefonoController = TextEditingController(text: empleado?.telefono ?? '');
+    final especialidadController =
+        TextEditingController(text: empleado?.especialidad ?? '');
+    DateTime? fechaNacimiento = empleado?.fechaNacimiento;
+    bool activo = empleado?.activo ?? true;
     final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.teal.shade700,
-                    Colors.teal.shade900,
-                  ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.teal.shade700,
+                      Colors.teal.shade900,
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                borderRadius: BorderRadius.circular(12),
+                child: Icon(
+                  isEditing ? Icons.edit : Icons.person_add,
+                  color: Colors.white,
+                  size: 24,
+                ),
               ),
-              child: const Icon(
-                Icons.person_add,
-                color: Colors.white,
-                size: 24,
+              const SizedBox(width: 12),
+              Text(isEditing ? 'Editar Empleado' : 'Nuevo Empleado'),
+            ],
+          ),
+          content: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    controller: nombreController,
+                    decoration: InputDecoration(
+                      labelText: 'Nombre completo *',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      prefixIcon: const Icon(Icons.person),
+                    ),
+                    validator: (v) => v?.isEmpty ?? true ? 'Requerido' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: telefonoController,
+                    decoration: InputDecoration(
+                      labelText: 'Teléfono *',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      prefixIcon: const Icon(Icons.phone),
+                    ),
+                    keyboardType: TextInputType.phone,
+                    validator: (v) => v?.isEmpty ?? true ? 'Requerido' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: especialidadController,
+                    decoration: InputDecoration(
+                      labelText: 'Especialidad (opcional)',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      prefixIcon: const Icon(Icons.work),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // CAMPO FECHA DE CUMPLEAÑOS
+                  InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: fechaNacimiento ?? DateTime(1995, 1, 1),
+                        firstDate: DateTime(1940),
+                        lastDate: DateTime.now(),
+                        builder: (context, child) {
+                          return Theme(
+                            data: Theme.of(context).copyWith(
+                              colorScheme: ColorScheme.light(
+                                primary: Colors.teal.shade700,
+                                onPrimary: Colors.white,
+                              ),
+                            ),
+                            child: child!,
+                          );
+                        },
+                      );
+                      if (picked != null) {
+                        setDialogState(() {
+                          fechaNacimiento = picked;
+                        });
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: 'Fecha de Cumpleaños (opcional)',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: Icon(
+                          Icons.cake,
+                          color: fechaNacimiento != null
+                              ? Colors.pink.shade400
+                              : Colors.grey,
+                        ),
+                        suffixIcon: fechaNacimiento != null
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 18),
+                                onPressed: () {
+                                  setDialogState(() {
+                                    fechaNacimiento = null;
+                                  });
+                                },
+                              )
+                            : null,
+                      ),
+                      child: Text(
+                        fechaNacimiento != null
+                            ? DateFormat('dd/MM/yyyy').format(fechaNacimiento!)
+                            : 'Seleccionar fecha...',
+                        style: TextStyle(
+                          color: fechaNacimiento != null
+                              ? Colors.black87
+                              : Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  if (isEditing) ...[
+                    const SizedBox(height: 12),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text(
+                        'Empleado Activo',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      activeThumbColor: Colors.teal.shade700,
+                      value: activo,
+                      onChanged: (val) {
+                        setDialogState(() {
+                          activo = val;
+                        });
+                      },
+                    ),
+                  ],
+                ],
               ),
             ),
-            const SizedBox(width: 12),
-            const Text('Nuevo Empleado'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancelar',
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  final esp = especialidadController.text.trim();
+
+                  if (isEditing) {
+                    final updated = empleado.copyWith(
+                      nombre: nombreController.text.trim(),
+                      telefono: telefonoController.text.trim(),
+                      especialidad: esp.isEmpty ? null : esp,
+                      fechaNacimiento: fechaNacimiento,
+                      activo: activo,
+                    );
+                    _empleadoBloc.add(UpdateEmpleado(updated));
+                  } else {
+                    final newEmp = Empleado(
+                      nombre: nombreController.text.trim(),
+                      telefono: telefonoController.text.trim(),
+                      especialidad: esp.isEmpty ? null : esp,
+                      fechaNacimiento: fechaNacimiento,
+                      activo: true,
+                      createdAt: DateTime.now(),
+                    );
+                    _empleadoBloc.add(CreateEmpleado(newEmp));
+                  }
+                  Navigator.pop(context);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal.shade700,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(isEditing ? 'Actualizar' : 'Guardar'),
+            ),
           ],
         ),
-        content: Form(
-          key: formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: nombreController,
-                  decoration: InputDecoration(
-                    labelText: 'Nombre completo *',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    prefixIcon: const Icon(Icons.person),
-                  ),
-                  validator: (v) => v?.isEmpty ?? true ? 'Requerido' : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: telefonoController,
-                  decoration: InputDecoration(
-                    labelText: 'Teléfono *',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    prefixIcon: const Icon(Icons.phone),
-                  ),
-                  keyboardType: TextInputType.phone,
-                  validator: (v) => v?.isEmpty ?? true ? 'Requerido' : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: especialidadController,
-                  decoration: InputDecoration(
-                    labelText: 'Especialidad (opcional)',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    prefixIcon: const Icon(Icons.work),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancelar',
-              style: TextStyle(color: Colors.grey.shade600),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (formKey.currentState!.validate()) {
-                final empleado = Empleado(
-                  nombre: nombreController.text,
-                  telefono: telefonoController.text,
-                  especialidad: especialidadController.text.isEmpty
-                      ? null
-                      : especialidadController.text,
-                  activo: true,
-                  createdAt: DateTime.now(),
-                );
-                _empleadoBloc.add(CreateEmpleado(empleado));
-                Navigator.pop(context);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.teal.shade700,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text('Guardar'),
-          ),
-        ],
       ),
     );
   }

@@ -26,8 +26,8 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
   final _emailController = TextEditingController();
   final _direccionController = TextEditingController();
   
-  final ClienteBloc _bloc = Modular.get<ClienteBloc>();
-  final ClienteRepository _repository = Modular.get<ClienteRepository>();
+  final ClienteBloc _bloc = inject<ClienteBloc>();
+  final ClienteRepository _repository = inject<ClienteRepository>();
   
   bool _isLoading = false;
   bool _isEdit = false;
@@ -97,7 +97,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
         ),
       );
 
-      Modular.to.navigate('/clientes');
+      context.navigate('/clientes');
     }
   }
 
@@ -111,7 +111,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Modular.to.navigate('/'),
+          onPressed: () => context.navigate('/clientes'),
         ),
         title: Text(_isEdit ? 'Editar Cliente' : 'Nuevo Cliente'),
         backgroundColor: Colors.blue.shade700,

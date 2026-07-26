@@ -51,19 +51,13 @@ class DeleteServicio extends ServicioEvent {
 // BLoC
 class ServicioBloc extends Bloc<ServicioEvent, ServicioState> {
   final ServicioRepository _servicioRepo;
-  final VehiculoRepository _vehiculoRepo;
-  final ClienteRepository _clienteRepo;
-  final EmpleadoRepository _empleadoRepo;
 
   ServicioBloc({
     required ServicioRepository servicioRepo,
-    required VehiculoRepository vehiculoRepo,
-    required ClienteRepository clienteRepo,
-    required EmpleadoRepository empleadoRepo,
+    VehiculoRepository? vehiculoRepo,
+    ClienteRepository? clienteRepo,
+    EmpleadoRepository? empleadoRepo,
   }) : _servicioRepo = servicioRepo,
-       _vehiculoRepo = vehiculoRepo,
-       _clienteRepo = clienteRepo,
-       _empleadoRepo = empleadoRepo,
        super(ServicioInitial()) {
     on<LoadServicios>(_onLoadServicios);
     on<CreateServicio>(_onCreateServicio);
@@ -75,34 +69,60 @@ class ServicioBloc extends Bloc<ServicioEvent, ServicioState> {
     try {
       emit(ServicioLoading());
       
-      final servicios = await _servicioRepo.getAll();
+      final rows = await _servicioRepo.getServiciosConDetalles();
+      final List<Servicio> servicios = [];
       final Map<int, Vehiculo> vehiculosMap = {};
       final Map<int, Cliente> clientesMap = {};
       final Map<int, Empleado> empleadosMap = {};
 
-      // Cargar vehículos y clientes
-      for (var servicio in servicios) {
-        if (!vehiculosMap.containsKey(servicio.vehiculoId)) {
-          final vehiculo = await _vehiculoRepo.getById(servicio.vehiculoId);
-          if (vehiculo != null) {
-            vehiculosMap[servicio.vehiculoId] = vehiculo;
+      for (var row in rows) {
+        final servicio = Servicio(
+          id: row['s_id'] as int?,
+          vehiculoId: row['s_vehiculo_id'] as int,
+          empleadoId: row['s_empleado_id'] as int?,
+          descripcion: row['s_descripcion'] as String,
+          costo: (row['s_costo'] as num).toDouble(),
+          fecha: DateTime.parse(row['s_fecha'] as String),
+          estado: row['s_estado'] as String,
+          notas: row['s_notas'] as String?,
+        );
+        servicios.add(servicio);
 
-            // Cargar cliente del vehículo
-            if (!clientesMap.containsKey(vehiculo.clienteId)) {
-              final cliente = await _clienteRepo.getById(vehiculo.clienteId);
-              if (cliente != null) {
-                clientesMap[vehiculo.clienteId] = cliente;
-              }
-            }
-          }
+        final vehiculoId = row['v_id'] as int;
+        if (!vehiculosMap.containsKey(vehiculoId)) {
+          vehiculosMap[vehiculoId] = Vehiculo(
+            id: vehiculoId,
+            clienteId: row['v_cliente_id'] as int,
+            marca: row['v_marca'] as String,
+            modelo: row['v_modelo'] as String,
+            anio: row['v_anio'] as int,
+            placa: row['v_placa'] as String,
+          );
         }
 
-        // Cargar empleado si existe
-        if (servicio.empleadoId != null &&
-            !empleadosMap.containsKey(servicio.empleadoId)) {
-          final empleado = await _empleadoRepo.getById(servicio.empleadoId!);
-          if (empleado != null) {
-            empleadosMap[servicio.empleadoId!] = empleado;
+        final clienteId = row['c_id'] as int;
+        if (!clientesMap.containsKey(clienteId)) {
+          clientesMap[clienteId] = Cliente(
+            id: clienteId,
+            nombre: row['c_nombre'] as String,
+            telefono: row['c_telefono'] as String,
+            email: row['c_email'] as String?,
+            direccion: row['c_direccion'] as String?,
+            createdAt: DateTime.parse(row['c_created_at'] as String),
+          );
+        }
+
+        if (row['e_id'] != null) {
+          final empleadoId = row['e_id'] as int;
+          if (!empleadosMap.containsKey(empleadoId)) {
+            empleadosMap[empleadoId] = Empleado(
+              id: empleadoId,
+              nombre: row['e_nombre'] as String,
+              telefono: row['e_telefono'] as String,
+              especialidad: row['e_especialidad'] as String?,
+              activo: (row['e_activo'] as int) == 1,
+              createdAt: DateTime.parse(row['e_created_at'] as String),
+            );
           }
         }
       }

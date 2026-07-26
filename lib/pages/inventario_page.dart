@@ -13,7 +13,7 @@ class InventarioPage extends StatefulWidget {
 }
 
 class _InventarioPageState extends State<InventarioPage> {
-  final InventarioRepository _repository = Modular.get<InventarioRepository>();
+  final InventarioRepository _repository = inject<InventarioRepository>();
 
   List<Inventario> _inventario = [];
   bool _isLoading = true;
@@ -86,7 +86,7 @@ class _InventarioPageState extends State<InventarioPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Modular.to.navigate('/'),
+          onPressed: () => context.navigate('/'),
         ),
         title: const Text('Inventario'),
         backgroundColor: Colors.teal.shade700,

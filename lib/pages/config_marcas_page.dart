@@ -12,7 +12,7 @@ class ConfigMarcasPage extends StatefulWidget {
 }
 
 class _ConfigMarcasPageState extends State<ConfigMarcasPage> {
-  final _marcaBloc = Modular.get<MarcaBloc>();
+  final _marcaBloc = inject<MarcaBloc>();
 
   @override
   void initState() {
@@ -66,7 +66,7 @@ class _ConfigMarcasPageState extends State<ConfigMarcasPage> {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Modular.to.navigate('/'),
+          onPressed: () => context.navigate('/'),
         ),
         backgroundColor: Colors.blue.shade800,
         foregroundColor: Colors.white,
@@ -155,7 +155,7 @@ class ModelosManager extends StatefulWidget {
 }
 
 class _ModelosManagerState extends State<ModelosManager> {
-  final _modeloBloc = Modular.get<ModeloBloc>();
+  final _modeloBloc = inject<ModeloBloc>();
 
   @override
   void initState() {

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:async';
 import '../models.dart';
 import '../factura_bloc.dart';
 import '../repositories.dart';
 
 class FacturaFormPage extends StatefulWidget {
-  const FacturaFormPage({super.key});
+  final int? servicioId;
+  const FacturaFormPage({super.key, this.servicioId});
 
   @override
   State<FacturaFormPage> createState() => _FacturaFormPageState();
@@ -15,11 +17,11 @@ class FacturaFormPage extends StatefulWidget {
 class _FacturaFormPageState extends State<FacturaFormPage> {
   final _formKey = GlobalKey<FormState>();
   late final FacturaBloc _bloc;
-  final ClienteRepository _clienteRepo = Modular.get<ClienteRepository>();
-  final ServicioRepository _servicioRepo = Modular.get<ServicioRepository>();
-  final VehiculoRepository _vehiculoRepo = Modular.get<VehiculoRepository>();
+  final ClienteRepository _clienteRepo = inject<ClienteRepository>();
+  final ServicioRepository _servicioRepo = inject<ServicioRepository>();
+  final VehiculoRepository _vehiculoRepo = inject<VehiculoRepository>();
   final InventarioRepository _inventarioRepo =
-      Modular.get<InventarioRepository>();
+      inject<InventarioRepository>();
   bool _guardando = false;
 
   List<Cliente> _clientes = [];
@@ -32,63 +34,17 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
   double _descuento = 0.0;
   String _numeroFactura = '';
 
-  StreamSubscription<FacturaState>? _blocSubscription;
-
   @override
   void initState() {
     super.initState();
     print('📱 FacturaFormPage: initState');
-    _bloc = Modular.get<FacturaBloc>();
-    _setupBlocListener();
+    _bloc = inject<FacturaBloc>();
     _loadData();
-  }
-
-  void _setupBlocListener() {
-    print('👂 Configurando listener del BLoC');
-    _blocSubscription = _bloc.stream.listen((state) {
-      print('🔔 Nuevo estado del BLoC: ${state.runtimeType}');
-
-      if (!mounted) {
-        print('⚠️ Widget no montado, ignorando estado');
-        return;
-      }
-
-      if (state is FacturaLoaded) {
-        print('✅ Factura guardada exitosamente');
-        setState(() => _guardando = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Factura guardada exitosamente'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
-
-        // Esperar un momento antes de navegar
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) {
-            print('🔙 Navegando a /facturas');
-            Modular.to.navigate('/facturas');
-          }
-        });
-      } else if (state is FacturaError) {
-        print('❌ Error del BLoC: ${state.message}');
-        setState(() => _guardando = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ Error: ${state.message}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    });
   }
 
   @override
   void dispose() {
     print('🗑️ FacturaFormPage: dispose');
-    _blocSubscription?.cancel();
     super.dispose();
   }
 
@@ -98,9 +54,35 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
       _clientes = await _clienteRepo.getAll();
       print('✅ Clientes cargados: ${_clientes.length}');
 
-      final facturaRepo = Modular.get<FacturaRepository>();
+      final facturaRepo = inject<FacturaRepository>();
       _numeroFactura = await facturaRepo.getNextNumeroFactura();
       print('✅ Número de factura: $_numeroFactura');
+
+      // Pre-cargar si viene de un Servicio específico
+      if (widget.servicioId != null) {
+        final servicio = await _servicioRepo.getById(widget.servicioId!);
+        if (servicio != null) {
+          final vehiculo = await _vehiculoRepo.getById(servicio.vehiculoId);
+          if (vehiculo != null) {
+            final cliente = await _clienteRepo.getById(vehiculo.clienteId);
+            if (cliente != null) {
+              _clienteSeleccionado = cliente;
+              await _cargarServiciosCliente(cliente.id!);
+              _servicioSeleccionado = servicio;
+
+              _detalles.add(DetalleFactura(
+                facturaId: 0,
+                servicioId: servicio.id,
+                descripcion:
+                    'Servicio: ${servicio.descripcion} (${vehiculo.marca} ${vehiculo.modelo} - ${vehiculo.placa})',
+                cantidad: 1,
+                precioUnitario: servicio.costo,
+                total: servicio.costo,
+              ));
+            }
+          }
+        }
+      }
 
       if (mounted) {
         setState(() {});
@@ -476,13 +458,42 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return BlocListener<FacturaBloc, FacturaState>(
+      bloc: _bloc,
+      listener: (context, state) {
+        if (state is FacturaLoaded) {
+          setState(() => _guardando = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Factura guardada exitosamente'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (mounted) {
+              context.navigate('/facturas');
+            }
+          });
+        } else if (state is FacturaError) {
+          setState(() => _guardando = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ Error: ${state.message}'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
             print('🔙 Volviendo a /facturas');
-            Modular.to.navigate('/facturas');
+            context.navigate('/facturas');
           },
         ),
         title: const Text('Nueva Factura'),
@@ -918,6 +929,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

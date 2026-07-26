@@ -12,7 +12,7 @@ class ClientesPage extends StatefulWidget {
 }
 
 class _ClientesPageState extends State<ClientesPage> {
-  final ClienteBloc _bloc = Modular.get<ClienteBloc>();
+  final ClienteBloc _bloc = inject<ClienteBloc>();
 
   @override
   void initState() {
@@ -29,7 +29,7 @@ class _ClientesPageState extends State<ClientesPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Modular.to.navigate('/'),
+          onPressed: () => context.navigate('/'),
         ),
         title: const Text('Clientes'),
         backgroundColor: Colors.blue.shade700,
@@ -181,7 +181,7 @@ class _ClientesPageState extends State<ClientesPage> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Modular.to.navigate('/clientes/nuevo'),
+        onPressed: () => context.navigate('/clientes/nuevo'),
         backgroundColor: Colors.blue.shade700,
         icon: const Icon(Icons.add),
         label: isMobile ? const SizedBox.shrink() : const Text('Nuevo Cliente'),
@@ -203,7 +203,7 @@ class _ClientesPageState extends State<ClientesPage> {
         ),
         shadowColor: Colors.blue.withValues(alpha: 0.2),
         child: InkWell(
-          onTap: () => Modular.to.navigate('/clientes/detalle/${cliente.id}'),
+          onTap: () => context.navigate('/clientes/detalle/${cliente.id}'),
           borderRadius: BorderRadius.circular(16),
           splashColor: Colors.blue.withValues(alpha: 0.1),
           highlightColor: Colors.blue.withValues(alpha: 0.05),
@@ -387,9 +387,9 @@ class _ClientesPageState extends State<ClientesPage> {
                     ],
                     onSelected: (value) {
                       if (value == 'view') {
-                        Modular.to.navigate('/clientes/detalle/${cliente.id}');
+                        context.navigate('/clientes/detalle/${cliente.id}');
                       } else if (value == 'edit') {
-                        Modular.to.navigate('/clientes/editar/${cliente.id}');
+                        context.navigate('/clientes/editar/${cliente.id}');
                       } else if (value == 'delete') {
                         _showDeleteDialog(context, cliente.id!);
                       }
