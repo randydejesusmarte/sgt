@@ -5,6 +5,7 @@ import 'dart:async';
 import '../models.dart';
 import '../factura_bloc.dart';
 import '../repositories.dart';
+import '../utils/factura_pdf.dart';
 
 class FacturaFormPage extends StatefulWidget {
   final int? servicioId;
@@ -318,13 +319,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
       return;
     }
 
-    if (_detalles.isEmpty) {
-      print('❌ No hay items del inventario');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Agrega al menos un item del inventario')),
-      );
-      return;
-    }
+
 
     print('✅ Validaciones pasadas');
     print('   Cliente: ${_clienteSeleccionado!.nombre}');
@@ -471,9 +466,66 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
             ),
           );
 
-          Future.delayed(const Duration(milliseconds: 500), () {
+          Future.delayed(const Duration(milliseconds: 300), () async {
             if (mounted) {
-              context.navigate('/facturas');
+              final bool? es80mm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  title: const Row(
+                    children: [
+                      Icon(Icons.print, color: Colors.indigo),
+                      SizedBox(width: 8),
+                      Text('Imprimir Factura'),
+                    ],
+                  ),
+                  content: const Text('¿Desea imprimir la factura generada?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, null),
+                      child: const Text('No imprimir'),
+                    ),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.insert_drive_file, size: 16),
+                      label: const Text('Media Hoja (6x8)'),
+                      onPressed: () => Navigator.pop(context, false),
+                    ),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.receipt, size: 16),
+                      label: const Text('Térmica 80mm'),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                      onPressed: () => Navigator.pop(context, true),
+                    ),
+                  ],
+                ),
+              );
+
+              if (es80mm != null && state.facturas.isNotEmpty) {
+                final ultimaFactura = state.facturas.first;
+                final vehiculo = await _vehiculoRepo.getById(_servicioSeleccionado?.vehiculoId ?? 0);
+                await FacturaPdf.generarFactura(
+                  factura: ultimaFactura,
+                  cliente: _clienteSeleccionado!,
+                  detalles: [
+                    DetalleFactura(
+                      facturaId: ultimaFactura.id ?? 0,
+                      servicioId: _servicioSeleccionado?.id,
+                      descripcion: '${_servicioSeleccionado?.descripcion ?? ''} - ${vehiculo?.marca ?? ''} ${vehiculo?.modelo ?? ''}',
+                      cantidad: 1,
+                      precioUnitario: _servicioSeleccionado?.costo ?? 0,
+                      total: _servicioSeleccionado?.costo ?? 0,
+                    ),
+                    ..._detalles,
+                  ],
+                  servicio: _servicioSeleccionado,
+                  vehiculo: vehiculo,
+                  esImpresora80mm: es80mm,
+                );
+              }
+
+              if (mounted) {
+                context.navigate('/facturas');
+              }
             }
           });
         } else if (state is FacturaError) {

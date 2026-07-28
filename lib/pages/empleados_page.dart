@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../models.dart';
 import '../empleado_bloc.dart';
+import '../utils/formatters.dart';
 
 class EmpleadosPage extends StatefulWidget {
   const EmpleadosPage({super.key});
@@ -244,7 +245,7 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              empleado.telefono,
+                              formatTelefono(empleado.telefono),
                               style: TextStyle(
                                 fontSize: isMobile ? 14 : 15,
                                 color: Colors.grey.shade700,
@@ -391,7 +392,8 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
   void _showEmpleadoFormDialog({Empleado? empleado}) {
     final isEditing = empleado != null;
     final nombreController = TextEditingController(text: empleado?.nombre ?? '');
-    final telefonoController = TextEditingController(text: empleado?.telefono ?? '');
+    final phoneFormatter = createPhoneMaskFormatter(initialText: empleado?.telefono);
+    final telefonoController = TextEditingController(text: phoneFormatter.getMaskedText());
     final especialidadController =
         TextEditingController(text: empleado?.especialidad ?? '');
     DateTime? fechaNacimiento = empleado?.fechaNacimiento;
@@ -457,6 +459,7 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                       prefixIcon: const Icon(Icons.phone),
                     ),
                     keyboardType: TextInputType.phone,
+                    inputFormatters: [phoneFormatter],
                     validator: (v) => v?.isEmpty ?? true ? 'Requerido' : null,
                   ),
                   const SizedBox(height: 16),

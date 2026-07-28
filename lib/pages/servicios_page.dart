@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -6,6 +7,7 @@ import '../models.dart';
 import '../servicio_bloc.dart';
 import '../repositories.dart';
 import '../utils/volante_servicio_pdf.dart';
+import '../utils/formatters.dart';
 
 class ServiciosPage extends StatefulWidget {
   const ServiciosPage({super.key});
@@ -396,7 +398,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    servicio.descripcion,
+                    toTitleCase(servicio.descripcion),
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: isMobile ? 16 : 17,
@@ -504,7 +506,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
                     child: ElevatedButton.icon(
                       onPressed: () async {
                         if (cliente != null && vehiculo != null) {
-                          await VolanteServicioPdf.generarVolante(
+                          await _imprimirVolanteConOpcion(
                             cliente: cliente,
                             vehiculo: vehiculo,
                             servicio: servicio,
@@ -531,6 +533,55 @@ class _ServiciosPageState extends State<ServiciosPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _imprimirVolanteConOpcion({
+    required Cliente cliente,
+    required Vehiculo vehiculo,
+    required Servicio servicio,
+    Empleado? empleado,
+  }) async {
+    final bool? es80mm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.print, color: Colors.indigo),
+            SizedBox(width: 8),
+            Text('Formato de Volante'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.insert_drive_file, color: Colors.blue),
+              title: const Text('Cuarta parte de hoja'),
+              subtitle: const Text('Estándar (8.5 x 2.75 in)'),
+              onTap: () => Navigator.pop(context, false),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.receipt, color: Colors.green),
+              title: const Text('Impresora Térmica'),
+              subtitle: const Text('Tique 80 mm'),
+              onTap: () => Navigator.pop(context, true),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (es80mm != null) {
+      await VolanteServicioPdf.generarVolante(
+        cliente: cliente,
+        vehiculo: vehiculo,
+        servicio: servicio,
+        empleado: empleado,
+        esImpresora80mm: es80mm,
+      );
+    }
   }
 
   void _showServicioMenu(
@@ -565,7 +616,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
               onTap: () async {
                 Navigator.pop(context);
                 if (cliente != null && vehiculo != null) {
-                  await VolanteServicioPdf.generarVolante(
+                  await _imprimirVolanteConOpcion(
                     cliente: cliente,
                     vehiculo: vehiculo,
                     servicio: servicio,
@@ -888,18 +939,18 @@ class _ServiciosPageState extends State<ServiciosPage> {
                     const SizedBox(height: 12),
                     _buildTextField(
                       controller: marcaVehiculoController,
-                      label: 'Marca del Auto (ej: Toyota) *',
+                      label: 'Marca / Equipo (ej: Toyota / Planta) *',
                       icon: Icons.car_repair,
                       validator: (v) =>
-                          v?.trim().isEmpty ?? true ? 'Ingresa la marca' : null,
+                          v?.trim().isEmpty ?? true ? 'Ingresa la marca o equipo' : null,
                     ),
                     const SizedBox(height: 12),
                     _buildTextField(
                       controller: modeloVehiculoController,
-                      label: 'Modelo del Auto (ej: Corolla) *',
+                      label: 'Modelo / Referencia (ej: Corolla / CAT35) *',
                       icon: Icons.directions_car,
                       validator: (v) =>
-                          v?.trim().isEmpty ?? true ? 'Ingresa el modelo' : null,
+                          v?.trim().isEmpty ?? true ? 'Ingresa el modelo o referencia' : null,
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -907,10 +958,10 @@ class _ServiciosPageState extends State<ServiciosPage> {
                         Expanded(
                           child: _buildTextField(
                             controller: placaVehiculoController,
-                            label: 'Placa *',
+                            label: 'Placa / N° Serie *',
                             icon: Icons.pin,
                             validator: (v) => v?.trim().isEmpty ?? true
-                                ? 'Ingresa placa'
+                                ? 'Ingresa placa o N° serie'
                                 : null,
                           ),
                         ),
@@ -954,8 +1005,8 @@ class _ServiciosPageState extends State<ServiciosPage> {
                     const SizedBox(height: 16),
                     _buildDropdownField<Vehiculo?>(
                       value: vehiculoSeleccionado,
-                      label: 'Vehículo',
-                      icon: Icons.directions_car,
+                      label: 'Vehículo / Equipo',
+                      icon: Icons.build_circle,
                       items: vehiculos.map((vehiculo) {
                         return DropdownMenuItem(
                           value: vehiculo,
@@ -967,7 +1018,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
                         setDialogState(() => vehiculoSeleccionado = value);
                       },
                       validator: (v) =>
-                          v == null ? 'Selecciona un vehículo' : null,
+                          v == null ? 'Selecciona un vehículo o equipo' : null,
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -1180,7 +1231,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
                     id: null,
                     vehiculoId: vehiculoId,
                     empleadoId: empleadoSeleccionado?.id,
-                    descripcion: descripcionController.text,
+                    descripcion: toTitleCase(descripcionController.text.trim()),
                     costo: double.parse(costoController.text),
                     fecha: DateTime.now(),
                     estado: estadoSeleccionado,
@@ -1272,10 +1323,19 @@ class _ServiciosPageState extends State<ServiciosPage> {
     required IconData icon,
     int maxLines = 1,
     TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
   }) {
+    final effectiveFormatters = inputFormatters ??
+        ((keyboardType == TextInputType.phone ||
+                label.toLowerCase().contains('teléfono') ||
+                label.toLowerCase().contains('telefono'))
+            ? [createPhoneMaskFormatter()]
+            : null);
+
     return TextFormField(
       controller: controller,
+      inputFormatters: effectiveFormatters,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Container(
@@ -1301,6 +1361,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
       ),
       maxLines: maxLines,
       keyboardType: keyboardType,
+      textCapitalization: TextCapitalization.words,
       validator: validator,
     );
   }

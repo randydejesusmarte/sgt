@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:intl/intl.dart';
 import '../cliente_bloc.dart';
+import '../utils/formatters.dart';
 
 class ClientesPage extends StatefulWidget {
   const ClientesPage({super.key});
@@ -280,7 +281,7 @@ class _ClientesPageState extends State<ClientesPage> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              cliente.telefono,
+                              formatTelefono(cliente.telefono),
                               style: TextStyle(
                                 fontSize: isMobile ? 14 : 15,
                                 color: Colors.grey.shade700,

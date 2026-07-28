@@ -6,6 +6,7 @@ import '../models.dart';
 import '../repositories.dart';
 import '../vehiculo_bloc.dart';
 import '../factura_bloc.dart';
+import '../utils/formatters.dart';
 
 class ClienteDetallePage extends StatefulWidget {
   final int clienteId;
@@ -59,7 +60,7 @@ class _ClienteDetallePageState extends State<ClienteDetallePage> {
           foregroundColor: Colors.white,
           bottom: const TabBar(
             tabs: [
-              Tab(icon: Icon(Icons.directions_car), text: 'Vehículos'),
+              Tab(icon: Icon(Icons.build_circle), text: 'Vehículos / Equipos'),
               Tab(icon: Icon(Icons.receipt_long), text: 'Facturas'),
             ],
           ),
@@ -99,7 +100,7 @@ class _ClienteDetallePageState extends State<ClienteDetallePage> {
                                 children: [
                                   const Icon(Icons.phone, size: 16),
                                   const SizedBox(width: 4),
-                                  Text(_cliente!.telefono),
+                                  Text(formatTelefono(_cliente!.telefono)),
                                 ],
                               ),
                               if (_cliente!.email != null)
@@ -325,7 +326,7 @@ class _ClienteDetallePageState extends State<ClienteDetallePage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Agregar Vehículo'),
+        title: const Text('Agregar Vehículo / Equipo'),
         content: Form(
           key: formKey,
           child: SingleChildScrollView(

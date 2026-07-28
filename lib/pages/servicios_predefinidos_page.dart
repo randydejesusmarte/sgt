@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import '../models.dart';
 import '../servicio_predefinido_bloc.dart';
+import '../utils/formatters.dart';
 
 class ServiciosPredefinidosPage extends StatefulWidget {
   const ServiciosPredefinidosPage({super.key});
@@ -302,6 +303,7 @@ class _ServiciosPredefinidosPageState extends State<ServiciosPredefinidosPage> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: nombreController,
+                  textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(
                     labelText: 'Nombre del Servicio *',
                     border: OutlineInputBorder(),
@@ -312,6 +314,7 @@ class _ServiciosPredefinidosPageState extends State<ServiciosPredefinidosPage> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: descripcionController,
+                  textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(
                     labelText: 'Descripción',
                     border: OutlineInputBorder(),
@@ -355,10 +358,10 @@ class _ServiciosPredefinidosPageState extends State<ServiciosPredefinidosPage> {
                 final nuevoServicio = ServicioPredefinido(
                   id: servicio?.id,
                   codigo: codigoController.text,
-                  nombre: nombreController.text,
+                  nombre: toTitleCase(nombreController.text.trim()),
                   descripcion: descripcionController.text.isEmpty
                       ? null
-                      : descripcionController.text,
+                      : toTitleCase(descripcionController.text.trim()),
                   precio: double.parse(precioController.text),
                   categoria: categoriaController.text.isEmpty
                       ? null

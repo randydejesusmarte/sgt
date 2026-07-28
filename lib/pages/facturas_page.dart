@@ -72,13 +72,48 @@ class _FacturasPageState extends State<FacturasPage> {
         }
       }
 
-      await FacturaPdf.generarFactura(
-        factura: factura,
-        cliente: cliente,
-        detalles: detalles,
-        servicio: servicio,
-        vehiculo: vehiculo,
+      final bool? es80mm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.print, color: Colors.indigo),
+              SizedBox(width: 8),
+              Text('Formato de Factura'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.insert_drive_file, color: Colors.blue),
+                title: const Text('Media Hoja (Estándar)'),
+                subtitle: const Text('6 x 8 pulgadas'),
+                onTap: () => Navigator.pop(context, false),
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.receipt, color: Colors.green),
+                title: const Text('Impresora Térmica'),
+                subtitle: const Text('Tique 80 mm'),
+                onTap: () => Navigator.pop(context, true),
+              ),
+            ],
+          ),
+        ),
       );
+
+      if (es80mm != null) {
+        await FacturaPdf.generarFactura(
+          factura: factura,
+          cliente: cliente,
+          detalles: detalles,
+          servicio: servicio,
+          vehiculo: vehiculo,
+          esImpresora80mm: es80mm,
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

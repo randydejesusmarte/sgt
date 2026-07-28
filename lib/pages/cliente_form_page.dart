@@ -19,7 +19,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
   final _nombreController = TextEditingController();
   final _telefonoController = TextEditingController();
   final _phoneMaskFormatter = MaskTextInputFormatter(
-    mask: '(###) ###-####',
+    mask: '###-###-####',
     filter: { "#": RegExp(r'[0-9]') },
     type: MaskAutoCompletionType.lazy,
   );
@@ -46,7 +46,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
     final cliente = await _repository.getById(widget.clienteId!);
     if (cliente != null) {
       _nombreController.text = cliente.nombre;
-      _telefonoController.text = cliente.telefono;
+      _telefonoController.text = _phoneMaskFormatter.maskText(cliente.telefono);
       _emailController.text = cliente.email ?? '';
       _direccionController.text = cliente.direccion ?? '';
     }
