@@ -525,23 +525,90 @@ class _FacturasPageState extends State<FacturasPage> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: estadoColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            factura.estado.toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: estadoColor,
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: estadoColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                factura.estado.toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: estadoColor,
+                                ),
+                              ),
                             ),
-                          ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: factura.tipoPago == 'credito'
+                                    ? Colors.orange.shade50
+                                    : Colors.teal.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: factura.tipoPago == 'credito'
+                                      ? Colors.orange.shade300
+                                      : Colors.teal.shade300,
+                                ),
+                              ),
+                              child: Text(
+                                factura.tipoPago == 'credito'
+                                    ? 'CRÉDITO'
+                                    : 'CONTADO',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: factura.tipoPago == 'credito'
+                                      ? Colors.orange.shade800
+                                      : Colors.teal.shade800,
+                                ),
+                              ),
+                            ),
+                            if (factura.conComprobante)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.indigo.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: Colors.indigo.shade300,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.receipt_long,
+                                        size: 10, color: Colors.indigo),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      factura.ncf != null && factura.ncf.isNotEmpty
+                                          ? 'NCF: ${factura.ncf}'
+                                          : 'CON FISCAL',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.indigo.shade800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
                         ),
                       ],
                     ),

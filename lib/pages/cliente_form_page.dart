@@ -25,6 +25,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
   );
   final _emailController = TextEditingController();
   final _direccionController = TextEditingController();
+  String _clasificacionSeleccionada = 'normal';
   
   final ClienteBloc _bloc = inject<ClienteBloc>();
   final ClienteRepository _repository = inject<ClienteRepository>();
@@ -49,6 +50,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
       _telefonoController.text = _phoneMaskFormatter.maskText(cliente.telefono);
       _emailController.text = cliente.email ?? '';
       _direccionController.text = cliente.direccion ?? '';
+      _clasificacionSeleccionada = cliente.clasificacion;
     }
     setState(() => _isLoading = false);
   }
@@ -70,6 +72,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
         telefono: _telefonoController.text.trim(),
         email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
         direccion: _direccionController.text.trim().isEmpty ? null : _direccionController.text.trim(),
+        clasificacion: _clasificacionSeleccionada,
         createdAt: DateTime.now(),
       );
 
@@ -288,6 +291,71 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
                                   label: 'Dirección (opcional)',
                                   icon: Icons.location_on,
                                   maxLines: 3,
+                                ),
+                                const SizedBox(height: 20),
+
+                                // Clasificación del cliente
+                                DropdownButtonFormField<String>(
+                                  initialValue: _clasificacionSeleccionada,
+                                  decoration: InputDecoration(
+                                    labelText: 'Clasificación del Cliente',
+                                    prefixIcon: Icon(
+                                      Icons.stars_rounded,
+                                      color: Colors.blue.shade700,
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.grey.shade50,
+                                  ),
+                                  items: const [
+                                    DropdownMenuItem(
+                                      value: 'normal',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.person_outline, color: Colors.blue),
+                                          SizedBox(width: 8),
+                                          Text('Normal'),
+                                        ],
+                                      ),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'con_credito',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.credit_card, color: Colors.green),
+                                          SizedBox(width: 8),
+                                          Text('Con Crédito'),
+                                        ],
+                                      ),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'deudor',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.warning_amber_rounded, color: Colors.red),
+                                          SizedBox(width: 8),
+                                          Text('Deudor / Cliente Malo'),
+                                        ],
+                                      ),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'vip',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.star_rate_rounded, color: Colors.amber),
+                                          SizedBox(width: 8),
+                                          Text('Cliente VIP'),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                  onChanged: (val) {
+                                    if (val != null) {
+                                      setState(() => _clasificacionSeleccionada = val);
+                                    }
+                                  },
                                 ),
                                 const SizedBox(height: 32),
                                 

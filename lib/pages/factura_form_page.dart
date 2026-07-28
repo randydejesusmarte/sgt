@@ -34,6 +34,9 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
   final double _tasaImpuesto = 18.0;
   double _descuento = 0.0;
   String _numeroFactura = '';
+  String _tipoPago = 'contado'; // 'contado' | 'credito'
+  bool _conComprobante = false;
+  final TextEditingController _ncfController = TextEditingController();
 
   @override
   void initState() {
@@ -46,6 +49,7 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
   @override
   void dispose() {
     print('🗑️ FacturaFormPage: dispose');
+    _ncfController.dispose();
     super.dispose();
   }
 
@@ -393,7 +397,10 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
         impuesto: impuestoTotal,
         descuento: _descuento,
         total: totalFinal,
-        estado: 'pendiente',
+        estado: _tipoPago == 'credito' ? 'pendiente' : 'pagada',
+        tipoPago: _tipoPago,
+        conComprobante: _conComprobante,
+        ncf: _conComprobante ? _ncfController.text.trim() : null,
       );
 
       // 3. Actualizar inventario ANTES de guardar
@@ -634,6 +641,110 @@ class _FacturaFormPageState extends State<FacturaFormPage> {
                                 ),
                               ],
                             ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Card de Condiciones de Facturación (Pago & NCF)
+                      Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Condiciones de Facturación',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.purple.shade900,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              // Tipo de Pago (Contado / Crédito)
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: SegmentedButton<String>(
+                                      segments: const [
+                                        ButtonSegment<String>(
+                                          value: 'contado',
+                                          label: Text('Al Contado'),
+                                          icon: Icon(Icons.payments_outlined),
+                                        ),
+                                        ButtonSegment<String>(
+                                          value: 'credito',
+                                          label: Text('A Crédito'),
+                                          icon: Icon(Icons.credit_score_outlined),
+                                        ),
+                                      ],
+                                      selected: {_tipoPago},
+                                      onSelectionChanged: (newSelection) {
+                                        setState(() {
+                                          _tipoPago = newSelection.first;
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              const Divider(),
+                              // Comprobante Fiscal Switch & NCF
+                              SwitchListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: const Text(
+                                  'Comprobante Fiscal (NCF)',
+                                  style: TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                                subtitle: Text(
+                                  _conComprobante
+                                      ? 'Factura con Valor Fiscal'
+                                      : 'Sin Comprobante Fiscal (Consumidor Final)',
+                                  style: TextStyle(
+                                    color: _conComprobante
+                                        ? Colors.green.shade700
+                                        : Colors.grey.shade600,
+                                  ),
+                                ),
+                                value: _conComprobante,
+                                activeTrackColor: Colors.purple.shade700,
+                                onChanged: (val) {
+                                  setState(() {
+                                    _conComprobante = val;
+                                    if (val && _ncfController.text.trim().isEmpty) {
+                                      _ncfController.text =
+                                          'B01${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
+                                    }
+                                  });
+                                },
+                              ),
+                              if (_conComprobante) ...[
+                                const SizedBox(height: 8),
+                                TextFormField(
+                                  controller: _ncfController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Número NCF *',
+                                    hintText: 'Ej. B0100000001',
+                                    prefixIcon: const Icon(Icons.receipt),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  validator: (val) {
+                                    if (_conComprobante &&
+                                        (val == null || val.trim().isEmpty)) {
+                                      return 'Ingrese el NCF';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                       ),

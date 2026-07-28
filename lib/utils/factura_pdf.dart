@@ -127,6 +127,20 @@ class FacturaPdf {
           'Fecha: ${DateFormat('dd/MM/yyyy HH:mm').format(factura.fecha)}',
           style: const pw.TextStyle(fontSize: 6),
         ),
+        pw.Text(
+          'Pago: ${factura.tipoPago == 'credito' ? 'A CRÉDITO' : 'AL CONTADO'}',
+          style: pw.TextStyle(fontSize: 6, fontWeight: pw.FontWeight.bold),
+        ),
+        if (factura.conComprobante)
+          pw.Text(
+            'NCF: ${factura.ncf ?? 'CON COMPROBANTE'}',
+            style: pw.TextStyle(fontSize: 6, fontWeight: pw.FontWeight.bold),
+          )
+        else
+          pw.Text(
+            'Comprobante: SIN COMPROBANTE FISCAL',
+            style: const pw.TextStyle(fontSize: 6),
+          ),
         pw.Divider(thickness: 0.5),
         pw.Text('CLIENTE: ${cliente.nombre}', style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
         pw.Text('Tel: ${formatTelefono(cliente.telefono)}', style: const pw.TextStyle(fontSize: 6)),
@@ -248,6 +262,30 @@ class FacturaPdf {
                 'Fecha: ${DateFormat('dd/MM/yyyy').format(factura.fecha)}',
                 style: const pw.TextStyle(fontSize: 8),
               ),
+              pw.SizedBox(height: 2),
+              pw.Text(
+                'Pago: ${factura.tipoPago == 'credito' ? 'A CRÉDITO' : 'AL CONTADO'}',
+                style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
+              ),
+              if (factura.conComprobante) ...[
+                pw.SizedBox(height: 2),
+                pw.Text(
+                  factura.ncf != null && factura.ncf!.isNotEmpty
+                      ? 'NCF: ${factura.ncf}'
+                      : 'CON COMPROBANTE FISCAL',
+                  style: pw.TextStyle(
+                    fontSize: 8,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.blue900,
+                  ),
+                ),
+              ] else ...[
+                pw.SizedBox(height: 2),
+                pw.Text(
+                  'COMPROBANTE: SIN COMPROBANTE',
+                  style: const pw.TextStyle(fontSize: 7),
+                ),
+              ],
             ],
           ),
         ],

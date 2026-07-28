@@ -296,25 +296,59 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                           ),
                         ],
                         const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: (empleado.activo ? Colors.teal : Colors.grey)
-                                .withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            empleado.activo ? 'ACTIVO' : 'INACTIVO',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color:
-                                  empleado.activo ? Colors.teal : Colors.grey,
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: (empleado.activo ? Colors.teal : Colors.grey)
+                                    .withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                empleado.activo ? 'ACTIVO' : 'INACTIVO',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color:
+                                      empleado.activo ? Colors.teal : Colors.grey,
+                                ),
+                              ),
                             ),
-                          ),
+                            if (empleado.cobraPorcentaje) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.amber.shade300),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.percent,
+                                        size: 12, color: Colors.amber.shade800),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      'Comisión ${empleado.porcentajeComision.toStringAsFixed(0)}%',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.amber.shade900,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ],
                     ),
@@ -398,6 +432,12 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
         TextEditingController(text: empleado?.especialidad ?? '');
     DateTime? fechaNacimiento = empleado?.fechaNacimiento;
     bool activo = empleado?.activo ?? true;
+    bool cobraPorcentaje = empleado?.cobraPorcentaje ?? false;
+    final porcentajeController = TextEditingController(
+      text: empleado != null && empleado.cobraPorcentaje
+          ? empleado.porcentajeComision.toStringAsFixed(0)
+          : '50',
+    );
     final formKey = GlobalKey<FormState>();
 
     showDialog(
@@ -537,6 +577,63 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  const Divider(),
+
+                  // CONFIGURACIÓN DE PAGO POR PORCENTAJE
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text(
+                      'Cobro por Porcentaje / Comisión',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      cobraPorcentaje
+                          ? 'El empleado gana un % por cada trabajo realizado'
+                          : 'Sueldo o tarifa fija estándar',
+                      style: TextStyle(
+                        color: cobraPorcentaje
+                            ? Colors.teal.shade700
+                            : Colors.grey.shade600,
+                        fontSize: 12,
+                      ),
+                    ),
+                    activeTrackColor: Colors.teal.shade700,
+                    value: cobraPorcentaje,
+                    onChanged: (val) {
+                      setDialogState(() {
+                        cobraPorcentaje = val;
+                      });
+                    },
+                  ),
+                  if (cobraPorcentaje) ...[
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: porcentajeController,
+                      decoration: InputDecoration(
+                        labelText: 'Porcentaje de Comisión (%) *',
+                        hintText: 'Ej. 50',
+                        suffixText: '%',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: const Icon(Icons.percent),
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true),
+                      validator: (v) {
+                        if (!cobraPorcentaje) return null;
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Ingrese el porcentaje';
+                        }
+                        final numVal = double.tryParse(v.trim());
+                        if (numVal == null || numVal < 0 || numVal > 100) {
+                          return 'Ingrese un porcentaje válido (0 - 100)';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
 
                   if (isEditing) ...[
                     const SizedBox(height: 12),
@@ -546,7 +643,7 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                         'Empleado Activo',
                         style: TextStyle(fontWeight: FontWeight.w600),
                       ),
-                      activeThumbColor: Colors.teal.shade700,
+                      activeTrackColor: Colors.teal.shade700,
                       value: activo,
                       onChanged: (val) {
                         setDialogState(() {
@@ -571,6 +668,9 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
               onPressed: () {
                 if (formKey.currentState!.validate()) {
                   final esp = especialidadController.text.trim();
+                  final pct = cobraPorcentaje
+                      ? (double.tryParse(porcentajeController.text.trim()) ?? 0.0)
+                      : 0.0;
 
                   if (isEditing) {
                     final updated = empleado.copyWith(
@@ -579,6 +679,8 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                       especialidad: esp.isEmpty ? null : esp,
                       fechaNacimiento: fechaNacimiento,
                       activo: activo,
+                      cobraPorcentaje: cobraPorcentaje,
+                      porcentajeComision: pct,
                     );
                     _empleadoBloc.add(UpdateEmpleado(updated));
                   } else {
@@ -588,6 +690,8 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                       especialidad: esp.isEmpty ? null : esp,
                       fechaNacimiento: fechaNacimiento,
                       activo: true,
+                      cobraPorcentaje: cobraPorcentaje,
+                      porcentajeComision: pct,
                       createdAt: DateTime.now(),
                     );
                     _empleadoBloc.add(CreateEmpleado(newEmp));

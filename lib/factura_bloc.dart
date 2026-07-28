@@ -122,18 +122,7 @@ class FacturaBloc extends Bloc<FacturaEvent, FacturaState> {
     try {
       final factura = await facturaRepository.getById(event.id);
       if (factura != null) {
-        final updated = Factura(
-          id: factura.id,
-          clienteId: factura.clienteId,
-          numeroFactura: factura.numeroFactura,
-          fecha: factura.fecha,
-          subtotal: factura.subtotal,
-          impuesto: factura.impuesto,
-          descuento: factura.descuento,
-          total: factura.total,
-          estado: event.estado,
-          notas: factura.notas,
-        );
+        final updated = factura.copyWith(estado: event.estado);
         await facturaRepository.update(updated);
         add(LoadFacturas());
       }

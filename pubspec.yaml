@@ -30,5 +30,9 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+dependency_overrides:
+  jni: 1.0.0
+  jni_flutter: 1.0.1
+
 flutter: 
   uses-material-design: true

@@ -22,12 +22,35 @@ enum EstadoServicio {
   }
 }
 
+enum ClasificacionCliente {
+  normal('Normal', 'normal'),
+  conCredito('Con Crédito', 'con_credito'),
+  deudor('Deudor / Cliente Malo', 'deudor'),
+  vip('VIP', 'vip');
+
+  final String label;
+  final String value;
+  const ClasificacionCliente(this.label, this.value);
+
+  static ClasificacionCliente fromString(String? valor) {
+    if (valor == null) return ClasificacionCliente.normal;
+    return ClasificacionCliente.values.firstWhere(
+      (e) =>
+          e.value.toLowerCase() == valor.toLowerCase() ||
+          e.name.toLowerCase() == valor.toLowerCase() ||
+          e.label.toLowerCase() == valor.toLowerCase(),
+      orElse: () => ClasificacionCliente.normal,
+    );
+  }
+}
+
 class Cliente extends Equatable {
   final int? id;
   final String nombre;
   final String telefono;
   final String? email;
   final String? direccion;
+  final String clasificacion;
   final DateTime createdAt;
 
   const Cliente({
@@ -36,6 +59,7 @@ class Cliente extends Equatable {
     required this.telefono,
     this.email,
     this.direccion,
+    this.clasificacion = 'normal',
     required this.createdAt,
   });
 
@@ -46,6 +70,7 @@ class Cliente extends Equatable {
       'telefono': telefono,
       'email': email,
       'direccion': direccion,
+      'clasificacion': clasificacion,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -57,6 +82,7 @@ class Cliente extends Equatable {
       telefono: map['telefono'] as String,
       email: map['email'] as String?,
       direccion: map['direccion'] as String?,
+      clasificacion: (map['clasificacion'] as String?) ?? 'normal',
       createdAt: DateTime.parse(map['created_at'] as String),
     );
   }
@@ -67,6 +93,7 @@ class Cliente extends Equatable {
     String? telefono,
     String? email,
     String? direccion,
+    String? clasificacion,
     DateTime? createdAt,
   }) {
     return Cliente(
@@ -75,13 +102,14 @@ class Cliente extends Equatable {
       telefono: telefono ?? this.telefono,
       email: email ?? this.email,
       direccion: direccion ?? this.direccion,
+      clasificacion: clasificacion ?? this.clasificacion,
       createdAt: createdAt ?? this.createdAt,
     );
   }
 
   @override
   List<Object?> get props =>
-      [id, nombre, telefono, email, direccion, createdAt];
+      [id, nombre, telefono, email, direccion, clasificacion, createdAt];
 }
 
 class Vehiculo extends Equatable {
@@ -154,6 +182,7 @@ class Servicio extends Equatable {
   final DateTime fecha;
   final String estado;
   final String? notas;
+  final bool esGarantia;
 
   const Servicio({
     this.id,
@@ -164,6 +193,7 @@ class Servicio extends Equatable {
     required this.fecha,
     required this.estado,
     this.notas,
+    this.esGarantia = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -176,6 +206,7 @@ class Servicio extends Equatable {
       'fecha': fecha.toIso8601String(),
       'estado': estado,
       'notas': notas,
+      'es_garantia': esGarantia ? 1 : 0,
     };
   }
 
@@ -185,10 +216,11 @@ class Servicio extends Equatable {
       vehiculoId: map['vehiculo_id'] as int,
       empleadoId: map['empleado_id'] as int?,
       descripcion: map['descripcion'] as String,
-      costo: map['costo'] as double,
+      costo: (map['costo'] as num).toDouble(),
       fecha: DateTime.parse(map['fecha'] as String),
       estado: map['estado'] as String,
       notas: map['notas'] as String?,
+      esGarantia: (map['es_garantia'] as int? ?? 0) == 1,
     );
   }
 
@@ -201,6 +233,7 @@ class Servicio extends Equatable {
     DateTime? fecha,
     String? estado,
     String? notas,
+    bool? esGarantia,
   }) {
     return Servicio(
       id: id ?? this.id,
@@ -211,12 +244,22 @@ class Servicio extends Equatable {
       fecha: fecha ?? this.fecha,
       estado: estado ?? this.estado,
       notas: notas ?? this.notas,
+      esGarantia: esGarantia ?? this.esGarantia,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [id, vehiculoId, empleadoId, descripcion, costo, fecha, estado, notas];
+  List<Object?> get props => [
+        id,
+        vehiculoId,
+        empleadoId,
+        descripcion,
+        costo,
+        fecha,
+        estado,
+        notas,
+        esGarantia
+      ];
 }
 
 class Empleado extends Equatable {
@@ -226,6 +269,8 @@ class Empleado extends Equatable {
   final String? especialidad;
   final DateTime? fechaNacimiento;
   final bool activo;
+  final bool cobraPorcentaje;
+  final double porcentajeComision;
   final DateTime createdAt;
 
   const Empleado({
@@ -235,6 +280,8 @@ class Empleado extends Equatable {
     this.especialidad,
     this.fechaNacimiento,
     this.activo = true,
+    this.cobraPorcentaje = false,
+    this.porcentajeComision = 0.0,
     required this.createdAt,
   });
 
@@ -246,6 +293,8 @@ class Empleado extends Equatable {
       'especialidad': especialidad,
       'fecha_nacimiento': fechaNacimiento?.toIso8601String(),
       'activo': activo ? 1 : 0,
+      'cobra_porcentaje': cobraPorcentaje ? 1 : 0,
+      'porcentaje_comision': porcentajeComision,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -260,6 +309,9 @@ class Empleado extends Equatable {
           ? DateTime.parse(map['fecha_nacimiento'] as String)
           : null,
       activo: (map['activo'] as int) == 1,
+      cobraPorcentaje: (map['cobra_porcentaje'] as int? ?? 0) == 1,
+      porcentajeComision:
+          (map['porcentaje_comision'] as num? ?? 0.0).toDouble(),
       createdAt: DateTime.parse(map['created_at'] as String),
     );
   }
@@ -271,6 +323,8 @@ class Empleado extends Equatable {
     String? especialidad,
     DateTime? fechaNacimiento,
     bool? activo,
+    bool? cobraPorcentaje,
+    double? porcentajeComision,
     DateTime? createdAt,
   }) {
     return Empleado(
@@ -280,13 +334,24 @@ class Empleado extends Equatable {
       especialidad: especialidad ?? this.especialidad,
       fechaNacimiento: fechaNacimiento ?? this.fechaNacimiento,
       activo: activo ?? this.activo,
+      cobraPorcentaje: cobraPorcentaje ?? this.cobraPorcentaje,
+      porcentajeComision: porcentajeComision ?? this.porcentajeComision,
       createdAt: createdAt ?? this.createdAt,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [id, nombre, telefono, especialidad, fechaNacimiento, activo, createdAt];
+  List<Object?> get props => [
+        id,
+        nombre,
+        telefono,
+        especialidad,
+        fechaNacimiento,
+        activo,
+        cobraPorcentaje,
+        porcentajeComision,
+        createdAt
+      ];
 }
 
 class Compra extends Equatable {
@@ -368,6 +433,9 @@ class Factura extends Equatable {
   final double total;
   final String estado;
   final String? notas;
+  final String tipoPago; // 'contado' | 'credito'
+  final bool conComprobante;
+  final String? ncf;
 
   const Factura({
     this.id,
@@ -380,6 +448,9 @@ class Factura extends Equatable {
     required this.total,
     required this.estado,
     this.notas,
+    this.tipoPago = 'contado',
+    this.conComprobante = false,
+    this.ncf,
   });
 
   Map<String, dynamic> toMap() {
@@ -394,6 +465,9 @@ class Factura extends Equatable {
       'total': total,
       'estado': estado,
       'notas': notas,
+      'tipo_pago': tipoPago,
+      'con_comprobante': conComprobante ? 1 : 0,
+      'ncf': ncf,
     };
   }
 
@@ -409,6 +483,9 @@ class Factura extends Equatable {
       total: map['total'] as double,
       estado: map['estado'] as String,
       notas: map['notas'] as String?,
+      tipoPago: (map['tipo_pago'] as String?) ?? 'contado',
+      conComprobante: (map['con_comprobante'] as int? ?? 0) == 1,
+      ncf: map['ncf'] as String?,
     );
   }
 
@@ -423,6 +500,9 @@ class Factura extends Equatable {
     double? total,
     String? estado,
     String? notas,
+    String? tipoPago,
+    bool? conComprobante,
+    String? ncf,
   }) {
     return Factura(
       id: id ?? this.id,
@@ -435,6 +515,9 @@ class Factura extends Equatable {
       total: total ?? this.total,
       estado: estado ?? this.estado,
       notas: notas ?? this.notas,
+      tipoPago: tipoPago ?? this.tipoPago,
+      conComprobante: conComprobante ?? this.conComprobante,
+      ncf: ncf ?? this.ncf,
     );
   }
 
@@ -449,7 +532,10 @@ class Factura extends Equatable {
         descuento,
         total,
         estado,
-        notas
+        notas,
+        tipoPago,
+        conComprobante,
+        ncf,
       ];
 }
 

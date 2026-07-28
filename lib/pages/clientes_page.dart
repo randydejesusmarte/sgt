@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:intl/intl.dart';
 import '../cliente_bloc.dart';
+import '../models.dart';
 import '../utils/formatters.dart';
 
 class ClientesPage extends StatefulWidget {
@@ -313,34 +314,41 @@ class _ClientesPageState extends State<ClientesPage> {
                           ),
                         ],
                         const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.calendar_today,
-                                size: 12,
-                                color: Colors.blue.shade700,
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            _buildClasificacionBadge(cliente.clasificacion),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Desde ${DateFormat('dd/MM/yyyy').format(cliente.createdAt)}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.blue.shade700,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                            ],
-                          ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today,
+                                    size: 12,
+                                    color: Colors.blue.shade700,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Desde ${DateFormat('dd/MM/yyyy').format(cliente.createdAt)}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.blue.shade700,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -443,6 +451,59 @@ class _ClientesPageState extends State<ClientesPage> {
               ),
             ),
             child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildClasificacionBadge(String clasificacion) {
+    final clasif = ClasificacionCliente.fromString(clasificacion);
+    Color bg;
+    Color fg;
+    IconData icon;
+    switch (clasif) {
+      case ClasificacionCliente.conCredito:
+        bg = Colors.green.shade50;
+        fg = Colors.green.shade700;
+        icon = Icons.credit_card;
+        break;
+      case ClasificacionCliente.deudor:
+        bg = Colors.red.shade50;
+        fg = Colors.red.shade700;
+        icon = Icons.warning_amber_rounded;
+        break;
+      case ClasificacionCliente.vip:
+        bg = Colors.amber.shade50;
+        fg = Colors.amber.shade800;
+        icon = Icons.star_rounded;
+        break;
+      case ClasificacionCliente.normal:
+        bg = Colors.blue.shade50;
+        fg = Colors.blue.shade700;
+        icon = Icons.person_outline;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: fg.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: fg),
+          const SizedBox(width: 4),
+          Text(
+            clasif.label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: fg,
+            ),
           ),
         ],
       ),

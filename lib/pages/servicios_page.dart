@@ -114,17 +114,60 @@ class _ServiciosPageState extends State<ServiciosPage> {
                   );
                 }
 
-                final serviciosFiltrados = _filtroEstado == 'todos'
-                    ? state.servicios
-                    : state.servicios
-                        .where((s) =>
-                            s.estado.toLowerCase() ==
-                            _filtroEstado.toLowerCase())
-                        .toList();
+                final List<Servicio> serviciosFiltrados;
+                if (_filtroEstado == 'prioridad') {
+                  serviciosFiltrados = state.servicios.where((s) {
+                    final vehiculo = state.vehiculos[s.vehiculoId];
+                    final cliente = vehiculo != null
+                        ? state.clientes[vehiculo.clienteId]
+                        : null;
+                    final esVIP = cliente?.clasificacion == 'vip';
+                    return s.esGarantia || esVIP;
+                  }).toList();
+                } else if (_filtroEstado != 'todos') {
+                  serviciosFiltrados = state.servicios
+                      .where((s) =>
+                          s.estado.toLowerCase() ==
+                          _filtroEstado.toLowerCase())
+                      .toList();
+                } else {
+                  serviciosFiltrados = List.from(state.servicios);
+                }
+
+                // ORDENACIÓN POR PRIORIDAD DE TRABAJO:
+                // 1. Garantías pendientes/en proceso (Prioridad Máxima - Rank 0)
+                // 2. Clientes VIP pendientes/en proceso (Prioridad Alta - Rank 1)
+                // 3. Trabajos normales pendientes/en proceso (Rank 2)
+                // 4. Trabajos finalizados/cancelados (Rank 3)
+                // En cada grupo, ordenados por fecha descendente.
+                serviciosFiltrados.sort((a, b) {
+                  int getPriorityRank(Servicio s) {
+                    final vehiculo = state.vehiculos[s.vehiculoId];
+                    final cliente = vehiculo != null
+                        ? state.clientes[vehiculo.clienteId]
+                        : null;
+                    final esVIP = cliente?.clasificacion == 'vip';
+                    final esTerminado = s.estado.toLowerCase() == 'completado' ||
+                        s.estado.toLowerCase() == 'cancelado' ||
+                        s.estado.toLowerCase() == 'entregado';
+
+                    if (!esTerminado && s.esGarantia) return 0;
+                    if (!esTerminado && esVIP) return 1;
+                    if (!esTerminado) return 2;
+                    return 3;
+                  }
+
+                  final rankA = getPriorityRank(a);
+                  final rankB = getPriorityRank(b);
+                  if (rankA != rankB) {
+                    return rankA.compareTo(rankB);
+                  }
+                  return b.fecha.compareTo(a.fecha);
+                });
 
                 return Column(
                   children: [
-                    // Barra de Filtros por Estado
+                    // Barra de Filtros por Estado y Prioridad
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(
@@ -132,6 +175,8 @@ class _ServiciosPageState extends State<ServiciosPage> {
                       child: Row(
                         children: [
                           _buildFilterChip('Todos', 'todos'),
+                          const SizedBox(width: 8),
+                          _buildFilterChip('⚡ Prioritarios / Garantías', 'prioridad'),
                           const SizedBox(width: 8),
                           _buildFilterChip('Pendiente', 'pendiente'),
                           const SizedBox(width: 8),
@@ -257,14 +302,29 @@ class _ServiciosPageState extends State<ServiciosPage> {
     final estadoColor = _getEstadoColor(servicio.estado);
     final estadoInfo = _getEstadoInfo(servicio.estado);
 
+    final esVIP = cliente?.clasificacion == 'vip';
+    final esGarantia = servicio.esGarantia;
+
+    BorderSide cardBorder = BorderSide.none;
+    if (esGarantia) {
+      cardBorder = BorderSide(color: Colors.red.shade400, width: 2);
+    } else if (esVIP) {
+      cardBorder = BorderSide(color: Colors.amber.shade600, width: 2);
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: Card(
-        elevation: 4,
+        elevation: esGarantia || esVIP ? 6 : 4,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
+          side: cardBorder,
         ),
-        shadowColor: estadoColor.withValues(alpha: 0.3),
+        shadowColor: esGarantia
+            ? Colors.red.withValues(alpha: 0.3)
+            : (esVIP
+                ? Colors.amber.withValues(alpha: 0.3)
+                : estadoColor.withValues(alpha: 0.3)),
         child: InkWell(
           onTap: () {
             _showServicioMenu(context, servicio, cliente, vehiculo, empleado);
@@ -280,7 +340,11 @@ class _ServiciosPageState extends State<ServiciosPage> {
                 end: Alignment.bottomRight,
                 colors: [
                   Colors.white,
-                  estadoColor.withValues(alpha: 0.03),
+                  esGarantia
+                      ? Colors.red.shade50.withValues(alpha: 0.3)
+                      : (esVIP
+                          ? Colors.amber.shade50.withValues(alpha: 0.3)
+                          : estadoColor.withValues(alpha: 0.03)),
                 ],
               ),
             ),
@@ -298,21 +362,32 @@ class _ServiciosPageState extends State<ServiciosPage> {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              estadoColor,
-                              estadoColor.withValues(alpha: 0.7),
+                              esGarantia
+                                  ? Colors.red.shade700
+                                  : (esVIP ? Colors.amber.shade800 : estadoColor),
+                              esGarantia
+                                  ? Colors.red.shade900
+                                  : (esVIP
+                                      ? Colors.amber.shade900
+                                      : estadoColor.withValues(alpha: 0.7)),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: estadoColor.withValues(alpha: 0.3),
+                              color: (esGarantia
+                                      ? Colors.red
+                                      : (esVIP ? Colors.amber : estadoColor))
+                                  .withValues(alpha: 0.3),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
                           ],
                         ),
                         child: Icon(
-                          estadoInfo['icon'] as IconData,
+                          esGarantia
+                              ? Icons.shield
+                              : (estadoInfo['icon'] as IconData),
                           color: Colors.white,
                           size: isMobile ? 24 : 28,
                         ),
@@ -322,23 +397,80 @@ class _ServiciosPageState extends State<ServiciosPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: estadoColor.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                estadoInfo['label'] as String,
-                                style: TextStyle(
-                                  color: estadoColor,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: estadoColor.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    estadoInfo['label'] as String,
+                                    style: TextStyle(
+                                      color: estadoColor,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                if (esGarantia)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.shade700,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.shield,
+                                            color: Colors.white, size: 11),
+                                        SizedBox(width: 3),
+                                        Text(
+                                          'GARANTÍA',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                if (esVIP)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber.shade700,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.star,
+                                            color: Colors.white, size: 11),
+                                        SizedBox(width: 3),
+                                        Text(
+                                          'CLIENTE VIP',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
                             ),
                             const SizedBox(height: 4),
                             Row(
@@ -642,6 +774,34 @@ class _ServiciosPageState extends State<ServiciosPage> {
                 _showEstadoDialog(servicio);
               },
             ),
+            ListTile(
+              leading: Icon(
+                servicio.esGarantia ? Icons.shield_outlined : Icons.shield,
+                color: servicio.esGarantia ? Colors.grey : Colors.red,
+              ),
+              title: Text(
+                servicio.esGarantia
+                    ? 'Quitar marca de Garantía'
+                    : 'Marcar como Garantía (Prioridad Alta)',
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                final updated = servicio.copyWith(
+                  esGarantia: !servicio.esGarantia,
+                );
+                _servicioBloc.add(UpdateServicio(updated));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(!servicio.esGarantia
+                        ? 'Servicio marcado como Garantía (Atención Prioritaria)'
+                        : 'Servicio desmarcado de Garantía'),
+                    backgroundColor: !servicio.esGarantia
+                        ? Colors.red.shade700
+                        : Colors.blue.shade700,
+                  ),
+                );
+              },
+            ),
             //ListTile(
             //  leading: const Icon(Icons.delete, color: Colors.red),
             //  title: const Text('Eliminar Servicio'),
@@ -826,6 +986,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
     final notasController = TextEditingController();
     final formKey = GlobalKey<FormState>();
     String estadoSeleccionado = 'pendiente';
+    bool esGarantia = false;
     bool usarServicioPredefinido = serviciosPredefinidos.isNotEmpty;
 
     if (!mounted) return;
@@ -1270,7 +1431,38 @@ class _ServiciosPageState extends State<ServiciosPage> {
                           () => estadoSeleccionado = value ?? 'pendiente');
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
+                  const Divider(),
+
+                  // CONMUTADOR PARA RECLAMACIÓN DE GARANTÍA
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text(
+                      'Servicio por Garantía',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      esGarantia
+                          ? 'Reclamación de Garantía (Atención Prioritaria Alta)'
+                          : 'Servicio regular o estándar',
+                      style: TextStyle(
+                        color: esGarantia
+                            ? Colors.red.shade700
+                            : Colors.grey.shade600,
+                        fontSize: 12,
+                      ),
+                    ),
+                    activeTrackColor: Colors.red.shade700,
+                    value: esGarantia,
+                    onChanged: (val) {
+                      setDialogState(() {
+                        esGarantia = val;
+                      });
+                    },
+                  ),
+                  const Divider(),
+                  const SizedBox(height: 8),
+
                   _buildTextField(
                     controller: notasController,
                     label: 'Notas adicionales',
@@ -1327,6 +1519,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
                     notas: notasController.text.isEmpty
                         ? null
                         : notasController.text,
+                    esGarantia: esGarantia,
                   );
 
                   _servicioBloc.add(CreateServicio(servicio));

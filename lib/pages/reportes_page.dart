@@ -891,12 +891,37 @@ class _ReportesPageState extends State<ReportesPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            emp.nombre,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
+                          Row(
+                            children: [
+                              Text(
+                                emp.nombre,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              if (emp.cobraPorcentaje) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.shade50,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                        color: Colors.amber.shade300),
+                                  ),
+                                  child: Text(
+                                    '${emp.porcentajeComision.toStringAsFixed(0)}%',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.amber.shade900,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                           Text(
                             emp.especialidad ?? 'Técnico General',
@@ -913,13 +938,21 @@ class _ReportesPageState extends State<ReportesPage> {
                           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
                         ),
                         Text(
-                          '\$${totalGenerado.toStringAsFixed(2)}',
+                          'Generado: \$${totalGenerado.toStringAsFixed(2)}',
                           style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green.shade800,
+                            fontSize: 12,
+                            color: Colors.grey.shade700,
                           ),
                         ),
+                        if (emp.cobraPorcentaje)
+                          Text(
+                            'Gana (${emp.porcentajeComision.toStringAsFixed(0)}%): \$${(totalGenerado * (emp.porcentajeComision / 100)).toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.amber.shade900,
+                            ),
+                          ),
                       ],
                     ),
                   ],

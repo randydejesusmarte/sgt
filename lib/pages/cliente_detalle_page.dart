@@ -94,12 +94,19 @@ class _ClienteDetallePageState extends State<ClienteDetallePage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                _cliente!.nombre,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      _cliente!.nombre,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  _buildClasificacionBadge(_cliente!.clasificacion),
+                                ],
                               ),
                               Row(
                                 children: [
@@ -647,6 +654,59 @@ class _ClienteDetallePageState extends State<ClienteDetallePage> {
               }
             },
             child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildClasificacionBadge(String clasificacion) {
+    final clasif = ClasificacionCliente.fromString(clasificacion);
+    Color bg;
+    Color fg;
+    IconData icon;
+    switch (clasif) {
+      case ClasificacionCliente.conCredito:
+        bg = Colors.green.shade50;
+        fg = Colors.green.shade700;
+        icon = Icons.credit_card;
+        break;
+      case ClasificacionCliente.deudor:
+        bg = Colors.red.shade50;
+        fg = Colors.red.shade700;
+        icon = Icons.warning_amber_rounded;
+        break;
+      case ClasificacionCliente.vip:
+        bg = Colors.amber.shade50;
+        fg = Colors.amber.shade800;
+        icon = Icons.star_rounded;
+        break;
+      case ClasificacionCliente.normal:
+        bg = Colors.blue.shade50;
+        fg = Colors.blue.shade700;
+        icon = Icons.person_outline;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: fg.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: fg),
+          const SizedBox(width: 4),
+          Text(
+            clasif.label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: fg,
+            ),
           ),
         ],
       ),

@@ -19,7 +19,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 6,
+      version: 9,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -41,6 +41,7 @@ CREATE TABLE clientes (
   telefono $textType,
   email TEXT,
   direccion TEXT,
+  clasificacion TEXT NOT NULL DEFAULT 'normal',
   created_at $textType
 )
 ''');
@@ -67,6 +68,7 @@ CREATE TABLE servicios (
   fecha $textType,
   estado $textType,
   notas TEXT,
+  es_garantia $intType DEFAULT 0,
   FOREIGN KEY (vehiculo_id) REFERENCES vehiculos (id) ON DELETE CASCADE,
   FOREIGN KEY (empleado_id) REFERENCES empleados (id) ON DELETE SET NULL
 )
@@ -80,6 +82,8 @@ CREATE TABLE empleados (
   especialidad TEXT,
   fecha_nacimiento TEXT,
   activo $intType,
+  cobra_porcentaje $intType DEFAULT 0,
+  porcentaje_comision $realType DEFAULT 0.0,
   created_at $textType
 )
 ''');
@@ -109,6 +113,9 @@ CREATE TABLE facturas (
   total $realType,
   estado $textType,
   notas TEXT,
+  tipo_pago TEXT NOT NULL DEFAULT 'contado',
+  con_comprobante INTEGER NOT NULL DEFAULT 0,
+  ncf TEXT,
   FOREIGN KEY (cliente_id) REFERENCES clientes (id) ON DELETE CASCADE
 )
 ''');
@@ -320,6 +327,22 @@ CREATE TABLE piezas (
 
     if (oldVersion < 6) {
       await db.execute('ALTER TABLE empleados ADD COLUMN fecha_nacimiento TEXT');
+    }
+
+    if (oldVersion < 7) {
+      await db.execute("ALTER TABLE clientes ADD COLUMN clasificacion TEXT NOT NULL DEFAULT 'normal'");
+      await db.execute("ALTER TABLE facturas ADD COLUMN tipo_pago TEXT NOT NULL DEFAULT 'contado'");
+      await db.execute("ALTER TABLE facturas ADD COLUMN con_comprobante INTEGER NOT NULL DEFAULT 0");
+      await db.execute("ALTER TABLE facturas ADD COLUMN ncf TEXT");
+    }
+
+    if (oldVersion < 8) {
+      await db.execute("ALTER TABLE empleados ADD COLUMN cobra_porcentaje INTEGER NOT NULL DEFAULT 0");
+      await db.execute("ALTER TABLE empleados ADD COLUMN porcentaje_comision REAL NOT NULL DEFAULT 0.0");
+    }
+
+    if (oldVersion < 9) {
+      await db.execute("ALTER TABLE servicios ADD COLUMN es_garantia INTEGER NOT NULL DEFAULT 0");
     }
   }
 

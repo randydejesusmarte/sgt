@@ -90,6 +90,7 @@ class ServicioBloc extends Bloc<ServicioEvent, ServicioState> {
           fecha: DateTime.parse(row['s_fecha'] as String),
           estado: row['s_estado'] as String,
           notas: row['s_notas'] as String?,
+          esGarantia: (row['s_es_garantia'] as int? ?? 0) == 1,
         );
         servicios.add(servicio);
 
@@ -113,6 +114,7 @@ class ServicioBloc extends Bloc<ServicioEvent, ServicioState> {
             telefono: row['c_telefono'] as String,
             email: row['c_email'] as String?,
             direccion: row['c_direccion'] as String?,
+            clasificacion: (row['c_clasificacion'] as String?) ?? 'normal',
             createdAt: DateTime.parse(row['c_created_at'] as String),
           );
         }
@@ -126,6 +128,9 @@ class ServicioBloc extends Bloc<ServicioEvent, ServicioState> {
               telefono: row['e_telefono'] as String,
               especialidad: row['e_especialidad'] as String?,
               activo: (row['e_activo'] as int) == 1,
+              cobraPorcentaje: (row['e_cobra_porcentaje'] as int? ?? 0) == 1,
+              porcentajeComision:
+                  (row['e_porcentaje_comision'] as num? ?? 0.0).toDouble(),
               createdAt: DateTime.parse(row['e_created_at'] as String),
             );
           }
@@ -163,6 +168,7 @@ class ServicioBloc extends Bloc<ServicioEvent, ServicioState> {
           fecha: DateTime.parse(row['s_fecha'] as String),
           estado: row['s_estado'] as String,
           notas: row['s_notas'] as String?,
+          esGarantia: (row['s_es_garantia'] as int? ?? 0) == 1,
         );
         servicios.add(servicio);
 
@@ -186,6 +192,7 @@ class ServicioBloc extends Bloc<ServicioEvent, ServicioState> {
             telefono: row['c_telefono'] as String,
             email: row['c_email'] as String?,
             direccion: row['c_direccion'] as String?,
+            clasificacion: (row['c_clasificacion'] as String?) ?? 'normal',
             createdAt: DateTime.parse(row['c_created_at'] as String),
           );
         }
@@ -199,6 +206,9 @@ class ServicioBloc extends Bloc<ServicioEvent, ServicioState> {
               telefono: row['e_telefono'] as String,
               especialidad: row['e_especialidad'] as String?,
               activo: (row['e_activo'] as int) == 1,
+              cobraPorcentaje: (row['e_cobra_porcentaje'] as int? ?? 0) == 1,
+              porcentajeComision:
+                  (row['e_porcentaje_comision'] as num? ?? 0.0).toDouble(),
               createdAt: DateTime.parse(row['e_created_at'] as String),
             );
           }
