@@ -6,7 +6,9 @@ import '../models.dart';
 import '../repositories.dart';
 import '../vehiculo_bloc.dart';
 import '../factura_bloc.dart';
+import '../servicio_bloc.dart';
 import '../utils/formatters.dart';
+import '../utils/volante_servicio_pdf.dart';
 
 class ClienteDetallePage extends StatefulWidget {
   final int clienteId;
@@ -21,6 +23,7 @@ class _ClienteDetallePageState extends State<ClienteDetallePage> {
   final ClienteRepository _clienteRepo = inject<ClienteRepository>();
   final VehiculoBloc _vehiculoBloc = inject<VehiculoBloc>();
   final FacturaBloc _facturaBloc = inject<FacturaBloc>();
+  final ServicioBloc _servicioBloc = inject<ServicioBloc>();
 
   Cliente? _cliente;
   bool _isLoading = true;
@@ -35,6 +38,7 @@ class _ClienteDetallePageState extends State<ClienteDetallePage> {
     _cliente = await _clienteRepo.getById(widget.clienteId);
     _vehiculoBloc.add(LoadVehiculosByCliente(widget.clienteId));
     _facturaBloc.add(LoadFacturasByCliente(widget.clienteId));
+    _servicioBloc.add(LoadServiciosByCliente(widget.clienteId));
     setState(() => _isLoading = false);
   }
 
@@ -48,18 +52,19 @@ class _ClienteDetallePageState extends State<ClienteDetallePage> {
     }
 
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.navigate('/clientes'),
-        ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.navigate('/clientes'),
+          ),
           title: Text(_cliente!.nombre),
           backgroundColor: Colors.blue.shade700,
           foregroundColor: Colors.white,
           bottom: const TabBar(
             tabs: [
+              Tab(icon: Icon(Icons.work_history), text: 'Historial de Trabajos'),
               Tab(icon: Icon(Icons.build_circle), text: 'Vehículos / Equipos'),
               Tab(icon: Icon(Icons.receipt_long), text: 'Facturas'),
             ],
@@ -68,23 +73,23 @@ class _ClienteDetallePageState extends State<ClienteDetallePage> {
         body: Column(
           children: [
             Card(
-              margin: const EdgeInsets.all(16),
+              margin: const EdgeInsets.all(12),
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
                         CircleAvatar(
-                          radius: 30,
+                          radius: 26,
                           backgroundColor: Colors.blue.shade700,
                           child: Text(
                             _cliente!.nombre[0].toUpperCase(),
-                            style: const TextStyle(fontSize: 30, color: Colors.white),
+                            style: const TextStyle(fontSize: 24, color: Colors.white),
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,23 +97,23 @@ class _ClienteDetallePageState extends State<ClienteDetallePage> {
                               Text(
                                 _cliente!.nombre,
                                 style: const TextStyle(
-                                  fontSize: 20,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               Row(
                                 children: [
-                                  const Icon(Icons.phone, size: 16),
+                                  const Icon(Icons.phone, size: 14),
                                   const SizedBox(width: 4),
-                                  Text(formatTelefono(_cliente!.telefono)),
+                                  Text(formatTelefono(_cliente!.telefono), style: const TextStyle(fontSize: 13)),
                                 ],
                               ),
-                              if (_cliente!.email != null)
+                              if (_cliente!.email != null && _cliente!.email!.isNotEmpty)
                                 Row(
                                   children: [
-                                    const Icon(Icons.email, size: 16),
+                                    const Icon(Icons.email, size: 14),
                                     const SizedBox(width: 4),
-                                    Text(_cliente!.email!),
+                                    Text(_cliente!.email!, style: const TextStyle(fontSize: 13)),
                                   ],
                                 ),
                             ],
@@ -116,13 +121,13 @@ class _ClienteDetallePageState extends State<ClienteDetallePage> {
                         ),
                       ],
                     ),
-                    if (_cliente!.direccion != null) ...[
-                      const Divider(height: 24),
+                    if (_cliente!.direccion != null && _cliente!.direccion!.isNotEmpty) ...[
+                      const Divider(height: 16),
                       Row(
                         children: [
-                          const Icon(Icons.location_on, size: 16),
+                          const Icon(Icons.location_on, size: 14),
                           const SizedBox(width: 4),
-                          Expanded(child: Text(_cliente!.direccion!)),
+                          Expanded(child: Text(_cliente!.direccion!, style: const TextStyle(fontSize: 13))),
                         ],
                       ),
                     ],
@@ -133,6 +138,7 @@ class _ClienteDetallePageState extends State<ClienteDetallePage> {
             Expanded(
               child: TabBarView(
                 children: [
+                  _buildHistorialTrabajosTab(),
                   _buildVehiculosTab(),
                   _buildFacturasTab(),
                 ],
@@ -149,6 +155,269 @@ class _ClienteDetallePageState extends State<ClienteDetallePage> {
     );
   }
 
+  Widget _buildHistorialTrabajosTab() {
+    return BlocBuilder<ServicioBloc, ServicioState>(
+      bloc: _servicioBloc,
+      builder: (context, state) {
+        if (state is ServicioLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (state is ServiciosLoaded) {
+          if (state.servicios.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.work_off_outlined, size: 54, color: Colors.grey.shade400),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Este cliente no tiene trabajos o servicios registrados aún',
+                    style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final totalInvertido = state.servicios.fold<double>(0, (sum, s) => sum + s.costo);
+          final ultimoServicio = state.servicios.first;
+
+          return Column(
+            children: [
+              // Tarjetas de Resumen del Historial
+              Container(
+                padding: const EdgeInsets.all(10),
+                color: Colors.blue.shade50,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildSummaryMetric(
+                        title: 'Trabajos Traídos',
+                        value: '${state.servicios.length}',
+                        icon: Icons.assignment_turned_in,
+                        color: Colors.blue.shade800,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _buildSummaryMetric(
+                        title: 'Última Entrada',
+                        value: DateFormat('dd/MM/yyyy').format(ultimoServicio.fecha),
+                        icon: Icons.calendar_today,
+                        color: Colors.indigo.shade800,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _buildSummaryMetric(
+                        title: 'Total Trabajos',
+                        value: '\$${totalInvertido.toStringAsFixed(2)}',
+                        icon: Icons.attach_money,
+                        color: Colors.green.shade800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: state.servicios.length,
+                  padding: const EdgeInsets.all(8),
+                  itemBuilder: (context, index) {
+                    final servicio = state.servicios[index];
+                    final vehiculo = state.vehiculos[servicio.vehiculoId];
+                    final empleado = servicio.empleadoId != null ? state.empleados[servicio.empleadoId] : null;
+
+                    Color estadoColor = servicio.estado == 'entregado' || servicio.estado == 'completado'
+                        ? Colors.green
+                        : servicio.estado == 'en_proceso'
+                            ? Colors.blue
+                            : servicio.estado == 'pendiente'
+                                ? Colors.orange
+                                : Colors.red;
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.shade100,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        '#${servicio.id}',
+                                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade900, fontSize: 12),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade600),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      DateFormat('dd/MM/yyyy hh:mm a').format(servicio.fecha),
+                                      style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
+                                    ),
+                                  ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: estadoColor.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: estadoColor),
+                                  ),
+                                  child: Text(
+                                    servicio.estado.toUpperCase().replaceAll('_', ' '),
+                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: estadoColor),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const Divider(height: 14),
+                            Text(
+                              toTitleCase(servicio.descripcion),
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 6),
+                            if (vehiculo != null)
+                              Row(
+                                children: [
+                                  Icon(Icons.build_circle, size: 15, color: Colors.grey.shade700),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Equipo/Vehículo: ${vehiculo.marca} ${vehiculo.modelo} (${vehiculo.placa})',
+                                    style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
+                                  ),
+                                ],
+                              ),
+                            if (empleado != null) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(Icons.person, size: 15, color: Colors.grey.shade700),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Técnico: ${empleado.nombre}',
+                                    style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Costo: \$${servicio.costo.toStringAsFixed(2)}',
+                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.green.shade800),
+                                ),
+                                Row(
+                                  children: [
+                                    TextButton.icon(
+                                      onPressed: () async {
+                                        if (_cliente != null && vehiculo != null) {
+                                          await VolanteServicioPdf.generarVolante(
+                                            cliente: _cliente!,
+                                            vehiculo: vehiculo,
+                                            servicio: servicio,
+                                            empleado: empleado,
+                                          );
+                                        }
+                                      },
+                                      icon: const Icon(Icons.print, size: 16),
+                                      label: const Text('Volante'),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    ElevatedButton.icon(
+                                      onPressed: () {
+                                        context.navigate('/facturas/nueva/${servicio.id}');
+                                      },
+                                      icon: const Icon(Icons.receipt_long, size: 16),
+                                      label: const Text('Facturar'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.purple.shade700,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        }
+
+        return const Center(child: Text('Error cargando historial de trabajos'));
+      },
+    );
+  }
+
+  Widget _buildSummaryMetric({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 13, color: color),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildVehiculosTab() {
     return BlocBuilder<VehiculoBloc, VehiculoState>(
       bloc: _vehiculoBloc,
@@ -159,7 +428,7 @@ class _ClienteDetallePageState extends State<ClienteDetallePage> {
 
         if (state is VehiculoLoaded) {
           if (state.vehiculos.isEmpty) {
-            return const Center(child: Text('No hay vehículos registrados'));
+            return const Center(child: Text('No hay vehículos o equipos registrados'));
           }
 
           return ListView.builder(
@@ -169,13 +438,13 @@ class _ClienteDetallePageState extends State<ClienteDetallePage> {
               final vehiculo = state.vehiculos[index];
               return Card(
                 child: ListTile(
-                  leading: const Icon(Icons.directions_car, size: 40),
+                  leading: const Icon(Icons.build_circle, size: 40),
                   title: Text('${vehiculo.marca} ${vehiculo.modelo}'),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Año: ${vehiculo.anio}'),
-                      Text('Placa: ${vehiculo.placa}'),
+                      Text('Año / Modelo: ${vehiculo.anio}'),
+                      Text('Placa / Serie: ${vehiculo.placa}'),
                     ],
                   ),
                   trailing: IconButton(
@@ -191,7 +460,7 @@ class _ClienteDetallePageState extends State<ClienteDetallePage> {
           );
         }
 
-        return const Center(child: Text('Error cargando vehículos'));
+        return const Center(child: Text('Error cargando vehículos / equipos'));
       },
     );
   }
@@ -335,38 +604,23 @@ class _ClienteDetallePageState extends State<ClienteDetallePage> {
               children: [
                 TextFormField(
                   controller: marcaController,
-                  decoration: const InputDecoration(
-                    labelText: 'Marca *',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Marca / Tipo de Equipo'),
                   validator: (v) => v?.isEmpty ?? true ? 'Requerido' : null,
                 ),
-                const SizedBox(height: 12),
                 TextFormField(
                   controller: modeloController,
-                  decoration: const InputDecoration(
-                    labelText: 'Modelo *',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Modelo / Referencia'),
                   validator: (v) => v?.isEmpty ?? true ? 'Requerido' : null,
                 ),
-                const SizedBox(height: 12),
                 TextFormField(
                   controller: anioController,
-                  decoration: const InputDecoration(
-                    labelText: 'Año *',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Año / Modelo'),
                   keyboardType: TextInputType.number,
                   validator: (v) => v?.isEmpty ?? true ? 'Requerido' : null,
                 ),
-                const SizedBox(height: 12),
                 TextFormField(
                   controller: placaController,
-                  decoration: const InputDecoration(
-                    labelText: 'Placa *',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Placa / N° Serie'),
                   validator: (v) => v?.isEmpty ?? true ? 'Requerido' : null,
                 ),
               ],
@@ -378,15 +632,15 @@ class _ClienteDetallePageState extends State<ClienteDetallePage> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancelar'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () {
               if (formKey.currentState!.validate()) {
                 final vehiculo = Vehiculo(
                   clienteId: widget.clienteId,
-                  marca: marcaController.text,
-                  modelo: modeloController.text,
-                  anio: int.parse(anioController.text),
-                  placa: placaController.text,
+                  marca: marcaController.text.trim(),
+                  modelo: modeloController.text.trim(),
+                  anio: int.parse(anioController.text.trim()),
+                  placa: placaController.text.trim().toUpperCase(),
                 );
                 _vehiculoBloc.add(AddVehiculo(vehiculo));
                 Navigator.pop(context);

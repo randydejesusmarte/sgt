@@ -189,6 +189,28 @@ class ServicioRepository {
       ORDER BY s.fecha DESC
     ''');
   }
+
+  Future<List<Map<String, dynamic>>> getServiciosConDetallesByCliente(int clienteId) async {
+    final db = await _db.database;
+    return await db.rawQuery('''
+      SELECT 
+        s.id as s_id, s.vehiculo_id as s_vehiculo_id, s.empleado_id as s_empleado_id, 
+        s.descripcion as s_descripcion, s.costo as s_costo, s.fecha as s_fecha, 
+        s.estado as s_estado, s.notas as s_notas,
+        v.id as v_id, v.cliente_id as v_cliente_id, v.marca as v_marca, v.modelo as v_modelo, 
+        v.anio as v_anio, v.placa as v_placa,
+        c.id as c_id, c.nombre as c_nombre, c.telefono as c_telefono, c.email as c_email, 
+        c.direccion as c_direccion, c.created_at as c_created_at,
+        e.id as e_id, e.nombre as e_nombre, e.telefono as e_telefono, 
+        e.especialidad as e_especialidad, e.activo as e_activo, e.created_at as e_created_at
+      FROM servicios s
+      INNER JOIN vehiculos v ON s.vehiculo_id = v.id
+      INNER JOIN clientes c ON v.cliente_id = c.id
+      LEFT JOIN empleados e ON s.empleado_id = e.id
+      WHERE c.id = ?
+      ORDER BY s.fecha DESC
+    ''', [clienteId]);
+  }
 }
 
 // ========== REPOSITORIO DE COMPRAS ==========

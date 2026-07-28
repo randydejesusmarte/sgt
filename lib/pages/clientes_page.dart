@@ -359,9 +359,9 @@ class _ClientesPageState extends State<ClientesPage> {
                         value: 'view',
                         child: Row(
                           children: [
-                            Icon(Icons.visibility, color: Colors.blue),
+                            Icon(Icons.work_history, color: Colors.blue),
                             SizedBox(width: 12),
-                            Text('Ver Detalles'),
+                            Text('Ver Historial de Trabajos'),
                           ],
                         ),
                       ),

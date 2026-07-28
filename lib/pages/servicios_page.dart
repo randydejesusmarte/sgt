@@ -1020,6 +1020,95 @@ class _ServiciosPageState extends State<ServiciosPage> {
                       validator: (v) =>
                           v == null ? 'Selecciona un vehículo o equipo' : null,
                     ),
+                    if (clienteSeleccionado != null) ...[
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: () async {
+                          final nuevoVehiculo = await _mostrarDialogoNuevoVehiculo(context, clienteSeleccionado!);
+                          if (nuevoVehiculo != null) {
+                            final vehiculosActualizados = await inject<VehiculoRepository>().getByClienteId(clienteSeleccionado!.id!);
+                            setDialogState(() {
+                              vehiculos = vehiculosActualizados;
+                              vehiculoSeleccionado = vehiculosActualizados.firstWhere(
+                                (v) => v.id == nuevoVehiculo.id,
+                                orElse: () => nuevoVehiculo,
+                              );
+                            });
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Row(
+                                    children: [
+                                      const Icon(Icons.check_circle, color: Colors.white),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text('Equipo "${nuevoVehiculo.marca} ${nuevoVehiculo.modelo}" registrado y seleccionado'),
+                                      ),
+                                    ],
+                                  ),
+                                  backgroundColor: Colors.green.shade700,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  duration: const Duration(seconds: 3),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Colors.indigo.shade50, Colors.blue.shade50],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.indigo.withValues(alpha: 0.25), width: 1),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.indigo.shade700,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.add, color: Colors.white, size: 16),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '¿Es un equipo o vehículo nuevo?',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                          color: Colors.indigo.shade900,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Haz clic aquí para agregarlo a ${clienteSeleccionado!.nombre}',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.indigo.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              Icon(Icons.chevron_right, color: Colors.indigo.shade700, size: 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                   ],
 
@@ -1273,6 +1362,243 @@ class _ServiciosPageState extends State<ServiciosPage> {
               child: const Text('Guardar'),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Future<Vehiculo?> _mostrarDialogoNuevoVehiculo(BuildContext context, Cliente cliente) async {
+    final marcaController = TextEditingController();
+    final modeloController = TextEditingController();
+    final anioController = TextEditingController(text: DateTime.now().year.toString());
+    final placaController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    return await showDialog<Vehiculo>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 10,
+        child: Container(
+          width: 500,
+          constraints: const BoxConstraints(maxWidth: 520),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: Colors.white,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Encabezado estilizado con gradiente
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.indigo.shade800, Colors.blue.shade700],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.build_circle_rounded, color: Colors.white, size: 28),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Registrar Nuevo Equipo / Vehículo',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Cliente: ${cliente.nombre}',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              fontSize: 13,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Cuerpo del Formulario
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Badge informativo
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade50,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.amber.shade300),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.lightbulb_outline, size: 18, color: Colors.amber.shade900),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'El nuevo equipo quedará vinculado al cliente y se seleccionará de inmediato.',
+                                style: TextStyle(fontSize: 11, color: Colors.amber.shade900),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      TextFormField(
+                        controller: marcaController,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: InputDecoration(
+                          labelText: 'Marca / Tipo de Equipo *',
+                          hintText: 'Ej: Toyota, Caterpillar, Planta Eléctrica, Generador',
+                          prefixIcon: const Icon(Icons.car_repair, color: Colors.indigo),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.indigo.shade700, width: 2),
+                          ),
+                        ),
+                        validator: (v) => v?.trim().isEmpty ?? true ? 'Ingresa la marca o tipo de equipo' : null,
+                      ),
+                      const SizedBox(height: 14),
+
+                      TextFormField(
+                        controller: modeloController,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: InputDecoration(
+                          labelText: 'Modelo / Referencia *',
+                          hintText: 'Ej: Corolla, CAT 3500, GX200, Serie X',
+                          prefixIcon: const Icon(Icons.directions_car, color: Colors.indigo),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.indigo.shade700, width: 2),
+                          ),
+                        ),
+                        validator: (v) => v?.trim().isEmpty ?? true ? 'Ingresa el modelo o referencia' : null,
+                      ),
+                      const SizedBox(height: 14),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: placaController,
+                              textCapitalization: TextCapitalization.characters,
+                              decoration: InputDecoration(
+                                labelText: 'Placa / N° Serie *',
+                                hintText: 'Ej: A123456 / SN-8842',
+                                prefixIcon: const Icon(Icons.pin, color: Colors.indigo),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Colors.indigo.shade700, width: 2),
+                                ),
+                              ),
+                              validator: (v) => v?.trim().isEmpty ?? true ? 'Campo requerido' : null,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextFormField(
+                              controller: anioController,
+                              decoration: InputDecoration(
+                                labelText: 'Año / Modelo',
+                                hintText: 'Ej: 2024',
+                                prefixIcon: const Icon(Icons.calendar_today, color: Colors.indigo),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Colors.indigo.shade700, width: 2),
+                                ),
+                              ),
+                              keyboardType: TextInputType.number,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Botones de acción
+              Padding(
+                padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => Navigator.pop(dialogContext, null),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Cancelar'),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.check, size: 18),
+                      label: const Text('Guardar Equipo', style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.indigo.shade700,
+                        foregroundColor: Colors.white,
+                        elevation: 3,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () async {
+                        if (formKey.currentState!.validate()) {
+                          final vehiculoRepo = inject<VehiculoRepository>();
+                          final vehiculo = Vehiculo(
+                            clienteId: cliente.id!,
+                            marca: toTitleCase(marcaController.text.trim()),
+                            modelo: toTitleCase(modeloController.text.trim()),
+                            anio: int.tryParse(anioController.text) ?? DateTime.now().year,
+                            placa: placaController.text.trim().toUpperCase(),
+                          );
+                          final id = await vehiculoRepo.create(vehiculo);
+                          final nuevoVehiculo = vehiculo.copyWith(id: id);
+                          if (dialogContext.mounted) {
+                            Navigator.pop(dialogContext, nuevoVehiculo);
+                          }
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
