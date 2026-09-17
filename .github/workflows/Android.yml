@@ -1,47 +1,74 @@
-name: Build Flutter APK
+name: Flutter Build Android APK (Manual)
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch: {}   # te permite lanzarlo manualmente desde la pestaña Actions
+  workflow_dispatch:  # Solo se ejecuta manualmente desde la pestaña Actions
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  build-android:
+    runs-on: ubuntu-latest # Usamos Ubuntu porque es más rápido para compilar Android
 
     steps:
-      - name: Clonar repositorio
-        uses: actions/checkout@v7
+      - name: Checkout código
+        uses: actions/checkout@v5
 
-      - name: Configurar Java (requerido por Gradle/Android)
+      - name: Configurar Java
         uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
-          java-version: '17'
+          java-version: '17' # Requerido por las versiones recientes de Android y Gradle
 
-      - name: Configurar Flutter
+      - name: Instalar Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: stable  # Cambia a 'beta' si lo necesitas
           cache: true
 
-      - name: Actualizar dependencias (pub upgrade)
-        run: flutter pub upgrade
+      - name: Cachear Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
 
       - name: Obtener dependencias
         run: flutter pub get
+        # Nota: quitamos "flutter pub upgrade" — actualiza todo a la última versión
+        # ignorando pubspec.lock, lo que hace el build no reproducible.
+        # Si necesitas actualizar dependencias, hazlo localmente y comitea el lock.
 
-      - name: Analizar código (opcional, no rompe el build si falla)
-        run: flutter analyze || true
+      - name: Actualizar Gradle Wrapper
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew wrapper --gradle-version 8.14 --distribution-type all
+          cat gradle/wrapper/gradle-wrapper.properties
+        # Usamos el propio comando de Gradle en vez de sed: reescribe el archivo
+        # de forma correcta siempre, sin depender de que el regex matchee el
+        # formato exacto del template actual.
 
-      - name: Compilar APK (release)
+      - name: Actualizar versión de AGP
+        run: |
+          cd android
+          sed -i -E 's|(id\("com\.android\.application"\) version ")[^"]+(")|\18.7.3\2|' settings.gradle.kts
+          cat settings.gradle.kts
+        # AGP 8.7.3: estable, por debajo del salto a AGP 9 (que cambia el DSL
+        # y obliga a workarounds como android.newDsl).
+
+      - name: Actualizar versión de Kotlin
+        run: |
+          cd android
+          sed -i -E 's|(id\("org\.jetbrains\.kotlin\.android"\) version ")[^"]+(")|\12.1.0\2|' settings.gradle.kts
+          cat settings.gradle.kts
+
+      - name: Compilar APK para Android
         run: flutter build apk --release
 
-      - name: Subir APK como artefacto
-        uses: actions/upload-artifact@v7
+      - name: Subir artifact APK
+        uses: actions/upload-artifact@v5
         with:
-          name: app-release-apk
+          name: android-apk
           path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 7   # se borra automáticamente pasados 7 días
+          retention-days: 1
