@@ -21,47 +21,36 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable  # Cambia a 'beta' si lo necesitas
-          cache: true
-
-      - name: Cachear Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: |
-            gradle-${{ runner.os }}-
 
       - name: Obtener dependencias
         run: flutter pub get
-        # Nota: quitamos "flutter pub upgrade" — actualiza todo a la última versión
-        # ignorando pubspec.lock, lo que hace el build no reproducible.
-        # Si necesitas actualizar dependencias, hazlo localmente y comitea el lock.
+
+      - name: actualizar depencencias
+        run: flutter pub upgrade
 
       - name: Actualizar Gradle Wrapper
         run: |
           cd android
-          chmod +x gradlew
-          ./gradlew wrapper --gradle-version 8.14 --distribution-type all
+          sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-9.1.0-all.zip|' gradle/wrapper/gradle-wrapper.properties
           cat gradle/wrapper/gradle-wrapper.properties
-        # Usamos el propio comando de Gradle en vez de sed: reescribe el archivo
-        # de forma correcta siempre, sin depender de que el regex matchee el
-        # formato exacto del template actual.
 
       - name: Actualizar versión de AGP
         run: |
           cd android
-          sed -i -E 's|(id\("com\.android\.application"\) version ")[^"]+(")|\18.7.3\2|' settings.gradle.kts
+          sed -i -E 's|(id\("com\.android\.application"\) version ")[^"]+(")|\19.0.1\2|' settings.gradle.kts
           cat settings.gradle.kts
-        # AGP 8.7.3: estable, por debajo del salto a AGP 9 (que cambia el DSL
-        # y obliga a workarounds como android.newDsl).
 
       - name: Actualizar versión de Kotlin
         run: |
           cd android
-          sed -i -E 's|(id\("org\.jetbrains\.kotlin\.android"\) version ")[^"]+(")|\12.1.0\2|' settings.gradle.kts
+          sed -i -E 's|(id\("org\.jetbrains\.kotlin\.android"\) version ")[^"]+(")|\12.2.20\2|' settings.gradle.kts
           cat settings.gradle.kts
+
+      - name: Opt-out de android.newDsl (compatibilidad con Flutter Gradle plugin)
+        run: |
+          cd android
+          echo "android.newDsl=false" >> gradle.properties
+          cat gradle.properties
 
       - name: Compilar APK para Android
         run: flutter build apk --release
